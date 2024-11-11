@@ -7,10 +7,9 @@ from pathlib import Path
 from tabulate import tabulate
 import pandas as pd
 
-
 def get_file_path(fileName):
     file_name = fileName
-    base_path_win = "C:\\Users\\Alik\\Documents\\Project\\Lotto\\data\\Pais\\"
+    base_path_win = "C:\\Users\\Alik\\Documents\\Project\\FBOT\\PY\\FBot.py\\data\\XAUUSD\\D1\\"
     base_path_linux = "/storage/emulated/0/Documents/Pydroid3/FBot/data/XAUUSD/D1/"
     if os.name == 'nt':  # For Windows
         # Define Windows-specific path
@@ -40,21 +39,21 @@ def bentFunc63(x):
      (x[3] & x[4])  
                
 def bentFunc64(x):
-    return (x[0] & x[1] & x[2] +\
-                x[1] & x[3] & x[4]+ \
-                x[2] & x[3] & x[5]+ \
-                x[0] & x[3] + \
-                x[1] & x[5] +\
-                x[2] & x[3] +\
-                x[2] & x[4] +\
-                x[2] & x[5] + \
-                x[3] & x[4] + \
-                x[3] & x[5] ) % 2
+    return (x[0] & x[1] & x[2]) ^\
+                (x[1] & x[3] & x[4]) ^ \
+                (x[2] & x[3] & x[5]) ^ \
+                (x[0] & x[3]) ^ \
+                (x[1] & x[5]) ^\
+                (x[2] & x[3]) ^\
+                (x[2] & x[4]) ^\
+                (x[2] & x[5]) ^ \
+                (x[3] & x[4]) ^ \
+                (x[3] & x[5] )
  
 def bentFunc82(v):
     return (v[0] & v[1] & v[2]) ^ (v[0] & v[3]) ^ (v[1] & v[4]) ^ (v[2] & v[5]) ^ (v[6] & v[7])
  
-BENT_FUNC =  bentFunc62
+BENT_FUNC =  bentFunc82
 FUNC_NAME = BENT_FUNC.__name__
 
 def affine_transform(x, x_size, x_size2,
@@ -91,23 +90,28 @@ def affine_transform(x, x_size, x_size2,
     return result
 
 # Функция ошибки
-def approximation_error(sequence, m, mm,                     q_values):
+def approximation_error(sequence, m, mm, q_values):
     n = len(sequence)
     mismatches = 0 
     steps = n - m
+    error_counter = 0
+    max_error_counter = 0
+
     for i in range(steps):
         x_window = sequence[i:i + m]
-        approx_value = affine_transform(
-        x_window, m, mm, BENT_FUNC, q_values)
+        approx_value = affine_transform(x_window, m, mm, BENT_FUNC, q_values)
         if approx_value != sequence[i + m]:
             mismatches += 1
-    return mismatches / steps   
+            error_counter += 1
+        else:
+            max_error_counter = max(max_error_counter, error_counter)
+            error_counter = 0
+    return (max_error_counter + mismatches / steps)
     
 # Эвалюционная Функция
 def errorFunc(individual, sequence, m, mm):
     # Функция для оценки ошибки на обучающей выборке
-    err = approximation_error(sequence,
-     m, mm, individual)
+    err = approximation_error(sequence, m, mm, individual)
     return [err]
         
 # Генерация хромосомы (коэффициенты для верхней треугольной матрицы)
@@ -143,9 +147,12 @@ def print_matrix(chromosome, m):
 
 # Функция для запуска генетического алгоритма
 def searchBinQuadraticForm(params):
-    # Параметры из словаря
+    # Параметрcdы из словаря
     sequence = params['sequence']
     m = params['m']
+    m1  = m + 1
+    BitProba = 2./ m1*m1
+    # BitProba = 0.1;
     pop_size = params['pop_size']
     generations = params['generations']
     cx_prob = params['cx_prob']
@@ -155,8 +162,6 @@ def searchBinQuadraticForm(params):
     mu = params['mu']
     lambda_ = params['lambda']
     
-    m1  = m + 1
-    BitProba = 1. / m1*m1
     # Разделение на обучающую и тестовую выборки
     train_seq, test_seq = split_data(sequence, alpha)
     
@@ -168,7 +173,7 @@ def searchBinQuadraticForm(params):
     toolbox = base.Toolbox()
     toolbox.register("individual", tools.initIterate, creator.Individual, lambda: create_individual(m))
     toolbox.register("population", tools.initRepeat, list, toolbox.individual)
-    toolbox.register("mate", tools.cxTwoPoint)
+    toolbox.register("mate", tools.cxUniform, indpb=0.5)
     toolbox.register("mutate", tools.mutFlipBit, indpb=BitProba)
     #toolbox.register("mutate", tools.mutShuffleIndexes, indpb=BitProba)
     
@@ -231,9 +236,7 @@ def searchBinQuadraticForm(params):
 #         verbose=True)
     
     # Сохранение последней популяции и лучшего результата
-    #popToSave = [list(pop) for pop in population]
     np.save(pop_filename, population)
-    #hofToSave = [list(hf) for hf in hof]
     np.save(hof_filename, hof)
     print("Final population and best individual saved.")
 
@@ -260,15 +263,15 @@ generations = 100
 # Пример вызова функции
 params = {
     'sequence': sec ,  # Бинарная послед.
-    'm': 6,  # Размер окна
+    'm': 8,  # Размер окна
     'pop_size': 20,  # Размер популяции
     'generations': generations,  # Кол. поколений
-    'cx_prob': 0.1,  # Вероятность скрещивания
-    'mut_prob': 0.9,  # Вероятность мутации
+    'cx_prob': 0.5,  # Вероятность скрещивания
+    'mut_prob': 0.5,  # Вероятность мутации
     'alpha': 0.8,  # Разбиение на обучающую и тестовую выборку
-   # 'period':  generations //2 # сохранения
    'mu': 100,
    'lambda': 70
+   # 'period':  generations //2 # сохранения
 }
 
 best_chromosome = searchBinQuadraticForm(params)
