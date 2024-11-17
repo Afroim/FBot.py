@@ -43,13 +43,13 @@ def quadratic_approximation_error(sequence, m, q_values):
 # Функция для вычисления квадратичной формы по модулю 2
 def quadratic_form_mod2(x, q_values):
     n = len(x)
-    Q = np.zeros((n, n), dtype=int)
+    quadric = 0
     idx = 0
     for i in range(n):
         for j in range(i, n):
-            Q[i, j] = q_values[idx]
+            quadric ^= q_values[idx] & x[i] & x[j]
             idx += 1
-    return int((np.array(x) @ Q @ np.array(x).T) % 2)
+    return quadric
 
 # Генерация хромосомы (коэффициенты для верхней треугольной матрицы)
 def create_individual(m):

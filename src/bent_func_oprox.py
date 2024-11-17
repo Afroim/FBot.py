@@ -49,11 +49,14 @@ def bentFunc64(x):
                 (x[2] & x[5]) ^ \
                 (x[3] & x[4]) ^ \
                 (x[3] & x[5] )
+                
+def bentFunc621(x):
+     return (x[0]&x[1]) ^ (x[2]&x[3]) ^ (x[3]&x[4]&x[5])
  
 def bentFunc82(v):
     return (v[0] & v[1] & v[2]) ^ (v[0] & v[3]) ^ (v[1] & v[4]) ^ (v[2] & v[5]) ^ (v[6] & v[7])
  
-BENT_FUNC =  bentFunc82
+BENT_FUNC =  bentFunc621
 FUNC_NAME = BENT_FUNC.__name__
 
 def affine_transform(x, x_size, x_size2,
@@ -74,15 +77,15 @@ def affine_transform(x, x_size, x_size2,
     d = params[-1]
 
     # Линейное преобразование Ax
-    Ax = np.dot(A, x) % 2
+    Ax = np.dot(A, x)
 
     # Добавляем вектор смещения b
-    Ax_b =(Ax + b) % 2
+    Ax_b =(Ax + b)
     # Вычисляем значение Бент функции для преобразованных переменных
     bent_value = bent_func(Ax_b) 
 
     # Вычисляем скалярное произведение c ⋅ x
-    scalar_product = np.dot(c, x) % 2# c ∘ x 
+    scalar_product = np.dot(c, x) # c ∘ x 
 
     # Аффинное преобразование:
     # f(Ax ⊕ b) ⊕ (c ⋅ x) ⊕ d
@@ -90,7 +93,7 @@ def affine_transform(x, x_size, x_size2,
     return result
 
 # Функция ошибки
-def approximation_error(sequence, m, mm, q_values):
+def approximation_error2(sequence, m, mm, q_values):
     n = len(sequence)
     mismatches = 0 
     steps = n - m
@@ -107,6 +110,21 @@ def approximation_error(sequence, m, mm, q_values):
             max_error_counter = max(max_error_counter, error_counter)
             error_counter = 0
     return (max_error_counter + mismatches / steps)
+
+def approximation_error(sequence, m, mm, q_values):
+    n = len(sequence)
+    mismatches = 0 
+    steps = n - m
+
+    for i in range(steps):
+        x_window = sequence[i:i + m]
+        approx_value = affine_transform(x_window, m, mm, BENT_FUNC, q_values)
+        if approx_value != sequence[i + m]:
+            mismatches += 1
+  
+    return ( mismatches / steps )
+
+
     
 # Эвалюционная Функция
 def errorFunc(individual, sequence, m, mm):
@@ -151,7 +169,7 @@ def searchBinQuadraticForm(params):
     sequence = params['sequence']
     m = params['m']
     m1  = m + 1
-    BitProba = 2./ m1*m1
+    BitProba = 1./ m1*m1
     # BitProba = 0.1;
     pop_size = params['pop_size']
     generations = params['generations']
@@ -173,7 +191,7 @@ def searchBinQuadraticForm(params):
     toolbox = base.Toolbox()
     toolbox.register("individual", tools.initIterate, creator.Individual, lambda: create_individual(m))
     toolbox.register("population", tools.initRepeat, list, toolbox.individual)
-    toolbox.register("mate", tools.cxUniform, indpb=0.5)
+    toolbox.register("mate", tools.cxTwoPoint)
     toolbox.register("mutate", tools.mutFlipBit, indpb=BitProba)
     #toolbox.register("mutate", tools.mutShuffleIndexes, indpb=BitProba)
     
@@ -263,10 +281,10 @@ generations = 100
 # Пример вызова функции
 params = {
     'sequence': sec ,  # Бинарная послед.
-    'm': 8,  # Размер окна
-    'pop_size': 20,  # Размер популяции
+    'm': 6,  # Размер окна
+    'pop_size': 100,  # Размер популяции
     'generations': generations,  # Кол. поколений
-    'cx_prob': 0.5,  # Вероятность скрещивания
+    'cx_prob': 0.3,  # Вероятность скрещивания
     'mut_prob': 0.5,  # Вероятность мутации
     'alpha': 0.8,  # Разбиение на обучающую и тестовую выборку
    'mu': 100,
