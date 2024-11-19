@@ -29,13 +29,12 @@ min_relative_change = []
 max_relative_change = []
 for index, row in df.iterrows():
 	sec = row['negative sign']
-	print(sec)
 	if sec == 0:
-		max_limit = (df['High'] - df['Open'])/df['Open']
-		min_limit = (df['Open'] - df['Low'])/df['Open']
+		max_limit = (row['High'] - row['Open'])/row['Open']
+		min_limit = (row['Open'] - row['Low'])/row['Open']
 	else:
-		max_limit = (df['Open'] - df['Low'])/df['Open']
-		min_limit = (df['High'] - df['Open'])/df['Open']
+		max_limit = (row['Open'] - row['Low'])/row['Open']
+		min_limit = (row['High'] - row['Open'])/row['Open']
 
 	min_relative_change.append(min_limit)
 	max_relative_change.append(max_limit)
@@ -43,3 +42,10 @@ for index, row in df.iterrows():
 avr_min = np.median(min_relative_change)
 avr_max = np.median(max_relative_change)
 print(avr_max, avr_min)
+
+bin_min_relative_change = [1 if item > avr_min else 0 for item in min_relative_change]
+bin_filename = get_file_path('bin_min_relative_change.npy')
+np.save(bin_filename, bin_min_relative_change)
+print('Save bin_min_relative_change')
+		
+
