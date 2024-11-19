@@ -1,3 +1,6 @@
+"""
+    https://deap.readthedocs.io/en/master/api/tools.html#operators
+"""
 import numpy as np
 from deap import base, creator, tools, algorithms
 import random
@@ -191,11 +194,13 @@ def searchBinQuadraticForm(params):
     toolbox = base.Toolbox()
     toolbox.register("individual", tools.initIterate, creator.Individual, lambda: create_individual(m))
     toolbox.register("population", tools.initRepeat, list, toolbox.individual)
-    toolbox.register("mate", tools.cxTwoPoint)
+    # toolbox.register("mate", tools.cxTwoPoint)
+    toolbox.register("mate", tools.cxUniform, indpb=0.5)
     toolbox.register("mutate", tools.mutFlipBit, indpb=BitProba)
     #toolbox.register("mutate", tools.mutShuffleIndexes, indpb=BitProba)
     
-    toolbox.register("select", tools.selTournament, tournsize=3)
+    # toolbox.register("select", tools.selTournament, tournsize=3)
+    toolbox.register("select", tools.selBest)
     
     # Эволюционная функция
     toolbox.register("evaluate", errorFunc, sequence=train_seq, m=m, mm=m*m)
@@ -228,30 +233,30 @@ def searchBinQuadraticForm(params):
         print("New population created.")
 
     # Хранилише для хранения лучших хромосом
-    hof = tools.HallOfFame(1)
+    hof = tools.HallOfFame(3)
 
     #--- Алгоритмы эволюции
-    population, logbook = algorithms.eaSimple(
-        population, toolbox,
-        cxpb=cx_prob,
-        mutpb=mut_prob,
+    # population, logbook = algorithms.eaSimple(
+    #     population, toolbox,
+    #     cxpb=cx_prob,
+    #     mutpb=mut_prob,
+    #     ngen=generations,
+    #     stats=stats,
+    #     halloffame=hof,
+    #     verbose=True
+    # )
+    
+    population, logbook = algorithms.\
+       eaMuPlusLambda(
+        population, toolbox, 
+        mu = mu, 
+        lambda_ = lambda_,
+        cxpb=cx_prob, 
+        mutpb=mut_prob, 
         ngen=generations,
         stats=stats,
         halloffame=hof,
-        verbose=True
-    )
-    
-    #population, logbook = algorithms.\
-#        eaMuPlusLambda(
-#         population, toolbox, 
-#         mu = mu, 
-#         lambda_ = lambda_,
-#         cxpb=cx_prob, 
-#         mutpb=mut_prob, 
-#         ngen=generations,
-#         stats=stats,
-#         halloffame=hof,
-#         verbose=True)
+        verbose=True)
     
     # Сохранение последней популяции и лучшего результата
     np.save(pop_filename, population)
@@ -282,13 +287,13 @@ generations = 100
 params = {
     'sequence': sec ,  # Бинарная послед.
     'm': 6,  # Размер окна
-    'pop_size': 100,  # Размер популяции
+    'pop_size': 10000,  # Размер популяции       
     'generations': generations,  # Кол. поколений
-    'cx_prob': 0.3,  # Вероятность скрещивания
+    'cx_prob': 0.5,  # Вероятность скрещивания
     'mut_prob': 0.5,  # Вероятность мутации
     'alpha': 0.8,  # Разбиение на обучающую и тестовую выборку
-   'mu': 100,
-   'lambda': 70
+   'mu': 5000,
+   'lambda': 6000
    # 'period':  generations //2 # сохранения
 }
 
