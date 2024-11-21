@@ -5,6 +5,7 @@ from pathlib import Path
 from tabulate import tabulate
 import pandas as pd
 import random
+import numpy as np
 
 def get_file_path(fileName):
     file_name = fileName
@@ -76,9 +77,11 @@ def predict_error(stats, sequence, m):
             error_counter = 0
     return (max_error_counter + mismatches / steps)
 
-filename = get_file_path('XAUUSD-D1-DIFF.csv') 
-df = pd.read_csv(filename)
-sequence = df['negative sign'].values.tolist()
+#filename = get_file_path('XAUUSD-D1-DIFF.csv') 
+#df = pd.read_csv(filename)
+#sequence = df['negative sign'].values.tolist()
+rel_bin_filename =get_file_path('bin_min_relative_change.npy')
+sequence = np.load(rel_bin_filename, allow_pickle=True).tolist()
 # print(sequence)
 # Разделение на обучающую и тестовую выборки
 alpha = 0.8
@@ -87,6 +90,8 @@ train_seq, test_seq = split_data(sequence, alpha)
 stats = windowStat(train_seq, m)
 forcase = predict_error(stats, test_seq, m)
 print('forcase', forcase)
-# for item in stats:
-#     print(item, stats[item])
+for item in stats:
+     p0=round(stats[item][0],5)
+     p1=round(stats[item][1],5)
+     print(item, '0:', p0, '1:', p1)
 

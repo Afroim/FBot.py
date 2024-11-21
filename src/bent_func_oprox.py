@@ -1,6 +1,3 @@
-"""
-    https://deap.readthedocs.io/en/master/api/tools.html#operators
-"""
 import numpy as np
 from deap import base, creator, tools, algorithms
 import random
@@ -59,7 +56,15 @@ def bentFunc621(x):
 def bentFunc82(v):
     return (v[0] & v[1] & v[2]) ^ (v[0] & v[3]) ^ (v[1] & v[4]) ^ (v[2] & v[5]) ^ (v[6] & v[7])
  
-BENT_FUNC =  bentFunc621
+def bentFunc8_4(x):
+    result = (x[0] & x[1] & x[2] & x[3]) ^ \
+             (x[4] & x[5] & x[6] & x[7]) ^ \
+             (x[0] & x[1] & x[4] & x[5]) ^ \
+             (x[2] & x[3] & x[6] & x[7])
+
+    return result
+ 
+BENT_FUNC =  bentFunc64
 FUNC_NAME = BENT_FUNC.__name__
 
 def affine_transform(x, x_size, x_size2,
@@ -128,7 +133,6 @@ def approximation_error(sequence, m, mm, q_values):
     return ( mismatches / steps )
 
 
-    
 # Эвалюционная Функция
 def errorFunc(individual, sequence, m, mm):
     # Функция для оценки ошибки на обучающей выборке
@@ -152,12 +156,21 @@ def create_individual(m):
             if len(sequence) < length:
                 sequence.append((byte >> i) & 1)
     return sequence
+    
 
+def selfTransform(size):
+    diagonal_matrix = np.diag([1]*size)
+    flattened_array = diagonal_matrix.flatten()
+    flattened_array = list(flattened_array) + [0]*(2*size +1)
+    return flattened_array
+    
+    
 # Разделение данных на обучающую и тестовую выборки
 def split_data(sequence, alpha):
     split_point = int(len(sequence) * alpha)
     return sequence[:split_point], sequence[split_point:]
     
+
 # Функция для  матрицы преобразования:
 def print_matrix(chromosome, m):
     A_flat = chromosome[:m*m]
@@ -194,12 +207,29 @@ def searchBinQuadraticForm(params):
     toolbox = base.Toolbox()
     toolbox.register("individual", tools.initIterate, creator.Individual, lambda: create_individual(m))
     toolbox.register("population", tools.initRepeat, list, toolbox.individual)
-    # toolbox.register("mate", tools.cxTwoPoint)
-    toolbox.register("mate", tools.cxUniform, indpb=0.5)
+    
+    
+    def partial_crossover(
+    parent1, parent2, start_idx, end_idx):
+   
+        segment1 = parent1[start_idx:end_idx + 1]
+        segment2 = parent2[start_idx:end_idx + 1]
+
+        segment1, segment2 = \
+        tools.cxPartialyMatched(
+        segment1, segment2)
+
+        offspring1 = parent1[:start_idx] + segment1 + parent1[end_idx + 1:]
+        offspring2 = parent2[:start_idx] + segment2 + parent2[end_idx + 1:]
+
+        return creator.Individual(offspring1),
+        creator.Individual(offspring2)
+        
+    toolbox.register("mate", tools.cxTwoPoint)
+    #toolbox.register("mate", partial_crossover, start_idx=0, end_idx=m*m)
     toolbox.register("mutate", tools.mutFlipBit, indpb=BitProba)
     #toolbox.register("mutate", tools.mutShuffleIndexes, indpb=BitProba)
     
-    # toolbox.register("select", tools.selTournament, tournsize=3)
     toolbox.register("select", tools.selBest)
     
     # Эволюционная функция
@@ -218,10 +248,6 @@ def searchBinQuadraticForm(params):
         population1 = np.load(pop_filename, allow_pickle=True).tolist()
         population = [ creator.Individual( pop ) for pop in population1]
         print("Population loaded from file.")
-        # Проверка инициализации fitness для каждой особи
-        #for ind in population:
-            #if not hasattr(ind, 'fitness') or not ind.fitness.valid:
-                #ind.fitness.values = toolbox.evaluate(ind)  # Пересчитываем fitness
         # Проверка размера загруженной популяции
         if len(population) < pop_size:
             add_size = pop_size - len(population)
@@ -233,30 +259,30 @@ def searchBinQuadraticForm(params):
         print("New population created.")
 
     # Хранилише для хранения лучших хромосом
-    hof = tools.HallOfFame(3)
+    hof = tools.HallOfFame(1)
 
     #--- Алгоритмы эволюции
-    # population, logbook = algorithms.eaSimple(
-    #     population, toolbox,
-    #     cxpb=cx_prob,
-    #     mutpb=mut_prob,
-    #     ngen=generations,
-    #     stats=stats,
-    #     halloffame=hof,
-    #     verbose=True
-    # )
+    #population, logbook = algorithms.eaSimple(
+#        population, toolbox,
+#        cxpb=cx_prob,
+#        mutpb=mut_prob,
+#        ngen=generations,
+#        stats=stats,
+#        halloffame=hof,
+#        verbose=True
+#    )
     
     population, logbook = algorithms.\
-       eaMuPlusLambda(
-        population, toolbox, 
-        mu = mu, 
-        lambda_ = lambda_,
-        cxpb=cx_prob, 
-        mutpb=mut_prob, 
-        ngen=generations,
-        stats=stats,
-        halloffame=hof,
-        verbose=True)
+        eaMuPlusLambda(
+         population, toolbox, 
+         mu = mu, 
+         lambda_ = lambda_,
+         cxpb=cx_prob, 
+         mutpb=mut_prob, 
+         ngen=generations,
+         stats=stats,
+         halloffame=hof,
+         verbose=True)
     
     # Сохранение последней популяции и лучшего результата
     np.save(pop_filename, population)
@@ -265,38 +291,74 @@ def searchBinQuadraticForm(params):
 
     # Оценка функции ошибки на тестовой выборке для лучшего результата
     best_individual = hof[0]
-    test_error = errorFunc(best_individual, test_seq, m, m*m)
+    train_error = errorFunc(best_individual,     
+    train_seq, m, m*m)
+    test_error = errorFunc(best_individual,
+    test_seq,     m, m*m)
     result_file = get_file_path('aprox_result.csv')
     # Сохранение результатов в CSV файл
     with open(result_file, 'a', newline='') as file:
         writer = csv.writer(file)
         writer.writerow([FUNC_NAME,m,
+        train_error[0],
         stats.compile(population)['min'],
         test_error[0], alpha, best_individual])
 
     print(f"Best individual: {best_individual}")
+    data = [
+   ["Func Name", FUNC_NAME],
+    ["Train Error", train_error[0]],
+    ["Min of Popupulation",
+        stats.compile(population)['min']],
+    ["Test Error", test_error[0]]
+    ]
+    print(tabulate(data, headers="", tablefmt="plain", numalign="right"))
+
     return best_individual
 
-# sec = [1, 0, 1, 1, 0, 1, 0, 1]
-# золото
-filename = get_file_path('XAUUSD-D1-DIFF.csv')   
-df = pd.read_csv(filename)
-sec = df['negative sign'].values.tolist()
-generations = 100
-# Пример вызова функции
-params = {
-    'sequence': sec ,  # Бинарная послед.
-    'm': 6,  # Размер окна
-    'pop_size': 10000,  # Размер популяции       
-    'generations': generations,  # Кол. поколений
-    'cx_prob': 0.5,  # Вероятность скрещивания
-    'mut_prob': 0.5,  # Вероятность мутации
-    'alpha': 0.8,  # Разбиение на обучающую и тестовую выборку
-   'mu': 5000,
-   'lambda': 6000
-   # 'period':  generations //2 # сохранения
-}
+def test1():
+    filename = get_file_path('XAUUSD-D1-DIFF.csv')
+    df = pd.read_csv(filename)
+    seq = df['negative sign'].values.tolist()
 
-best_chromosome = searchBinQuadraticForm(params)
-#print(f"Best coefficients: {best_chromosome}")
-print_matrix(best_chromosome, params['m'])
+    generations = 100
+# Пример вызова функции
+    params = {
+        'sequence': seq ,  # Бинарная послед.
+        'm': 6,  # Размер окна
+        'pop_size': 200,  # Размер популяции
+        'generations': generations,  # Кол. поколений
+        'cx_prob': 0.3,  # Вероятность скрещивания
+        'mut_prob': 0.5,  # Вероятность мутации
+        'alpha': 0.8,  # Разбиение на обучающую и тестовую выборку
+       'mu': 100,
+       'lambda': 70
+       # 'period':  generations //2 # сохранения
+    }
+
+    best_chromosome =             searchBinQuadraticForm(params)
+    print_matrix(best_chromosome, params['m'])
+
+def test2():
+    rel_bin_filename         =get_file_path('bin_min_relative_change.npy')
+    seq = np.load(rel_bin_filename, allow_pickle=True).tolist()
+    generations = 20
+# Пример вызова функции
+    params = {
+        'sequence': seq ,  # Бинарная послед.
+        'm': 8,  # Размер окна
+        'pop_size': 100,  # Размер популяции
+        'generations': generations,  # Кол. поколений
+        'cx_prob': 0.5,  # Вероятность скрещивания
+        'mut_prob': 0.5,  # Вероятность мутации
+        'alpha': 0.8,  # Разбиение на обучающую и тестовую выборку
+       'mu': 100,
+       'lambda': 70
+       # 'period':  generations //2 # сохранения
+    }
+
+    best_chromosome =             searchBinQuadraticForm(params)
+    print_matrix(best_chromosome, params['m'])
+
+if __name__ == "__main__":
+    test2()

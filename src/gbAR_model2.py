@@ -143,5 +143,14 @@ def test2():
     print("Error:" ,error)
 
 
-test2()
+def test3():
+    filename    =get_file_path('bin_min_relative_change.npy')
+    binsec = np.load(filename,         
+    allow_pickle=True).tolist()
+    subSeqSize = 200
+    p = 5
+    error = approximation_error(binsec, subSeqSize,p)
+    print("Error:" ,error)
+    
+test3()
     
