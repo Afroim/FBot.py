@@ -1,13 +1,14 @@
+import os
+import platform
+from pathlib import Path
 import numpy as np
 from deap import base, creator, tools, algorithms
 import random
 import csv
-import os
-from pathlib import Path
 from tabulate import tabulate
 import pandas as pd
 
-def get_file_path(fileName):
+def get_file_path_old(fileName):
     file_name = fileName
     base_path_win = "C:\\Users\\Alik\\Documents\\Project\\FBOT\\PY\\FBot.py\\data\\XAUUSD\\D1\\"
     base_path_linux = "/storage/emulated/0/Documents/Pydroid3/FBot/data/XAUUSD/D1/"
@@ -18,6 +19,22 @@ def get_file_path(fileName):
         # Define Termux
         file_path = Path(base_path_linux + file_name)
     return file_path
+    
+    
+def get_file_path(fileName, 
+        sub_path = "data/XAUUSD/D1/"):
+    data_file = sub_path + fileName
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    base_dir = os.path.abspath(os.path.join(current_dir, '..'))  
+    
+    # Создаём полный путь к поддиректории
+    full_path = os.path.join(base_dir, data_file)
+    
+    #if "Android" in platform.platform():
+#        print("Работаем на Termux.")
+    
+    return full_path
+    
     
 # бент функции
 def bentFunc61(x):
@@ -242,8 +259,8 @@ def searchBinQuadraticForm(params):
     stats.register("avg", np.mean)
     
     # Проверка наличия файла с последней популяцией
-    pop_filename = get_file_path('last_population.npy')
-    hof_filename =get_file_path('last_hof.npy')
+    pop_filename = get_file_path(FUNC_NAME + 'last_population.npy')
+    hof_filename =get_file_path(FUNC_NAME+'last_hof.npy')
     if os.path.exists(pop_filename):
         population1 = np.load(pop_filename, allow_pickle=True).tolist()
         population = [ creator.Individual( pop ) for pop in population1]
@@ -347,7 +364,7 @@ def test2():
     params = {
         'sequence': seq ,  # Бинарная послед.
         'm': 8,  # Размер окна
-        'pop_size': 100,  # Размер популяции
+        'pop_size': 20,  # Размер популяции
         'generations': generations,  # Кол. поколений
         'cx_prob': 0.5,  # Вероятность скрещивания
         'mut_prob': 0.5,  # Вероятность мутации
@@ -356,9 +373,16 @@ def test2():
        'lambda': 70
        # 'period':  generations //2 # сохранения
     }
-
     best_chromosome =             searchBinQuadraticForm(params)
     print_matrix(best_chromosome, params['m'])
 
+
+def test3():
+    filename = get_file_path('XAUUSD-D1-DIFF.csv')
+    df = pd.read_csv(filename)
+    seq = df['negative sign'].values.tolist()
+    print(seq)
+    
+    
 if __name__ == "__main__":
     test2()
