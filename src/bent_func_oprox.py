@@ -70,9 +70,15 @@ def bentFunc64(x):
 def bentFunc621(x):
      return (x[0]&x[1]) ^ (x[2]&x[3]) ^ (x[3]&x[4]&x[5])
  
+ 
+def bentFunc81(v):
+    return (v[0] & v[1]) ^ (v[2] & v[3]) ^ (v[4] & v[5]) ^ (v[6] & v[7])
+
+ 
 def bentFunc82(v):
     return (v[0] & v[1] & v[2]) ^ (v[0] & v[3]) ^ (v[1] & v[4]) ^ (v[2] & v[5]) ^ (v[6] & v[7])
- 
+
+  
 def bentFunc8_4(x):
     result = (x[0] & x[1] & x[2] & x[3]) ^ \
              (x[4] & x[5] & x[6] & x[7]) ^ \
@@ -81,7 +87,7 @@ def bentFunc8_4(x):
 
     return result
  
-BENT_FUNC =  bentFunc64
+BENT_FUNC =  bentFunc81
 FUNC_NAME = BENT_FUNC.__name__
 
 def affine_transform(x, x_size, x_size2,
@@ -215,6 +221,7 @@ def searchBinQuadraticForm(params):
     
     # Разделение на обучающую и тестовую выборки
     train_seq, test_seq = split_data(sequence, alpha)
+    #train_seq = test_seq
     
     # Создание начальной популяции
     creator.create("FitnessMin", base.Fitness, weights=(-1.0,))
@@ -359,18 +366,18 @@ def test1():
 def test2():
     rel_bin_filename         =get_file_path('bin_min_relative_change.npy')
     seq = np.load(rel_bin_filename, allow_pickle=True).tolist()
-    generations = 20
+    generations = 100
 # Пример вызова функции
     params = {
         'sequence': seq ,  # Бинарная послед.
         'm': 8,  # Размер окна
-        'pop_size': 20,  # Размер популяции
+        'pop_size': 100,  # Размер популяции
         'generations': generations,  # Кол. поколений
         'cx_prob': 0.5,  # Вероятность скрещивания
         'mut_prob': 0.5,  # Вероятность мутации
         'alpha': 0.8,  # Разбиение на обучающую и тестовую выборку
        'mu': 100,
-       'lambda': 70
+       'lambda': 80
        # 'period':  generations //2 # сохранения
     }
     best_chromosome =             searchBinQuadraticForm(params)
