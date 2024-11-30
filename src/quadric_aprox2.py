@@ -1,3 +1,4 @@
+#pylint:disable=E1101
 import os
 import platform
 from pathlib import Path
@@ -8,123 +9,45 @@ import csv
 from tabulate import tabulate
 import pandas as pd
 
-def get_file_path_old(fileName):
-    file_name = fileName
-    base_path_win = "C:\\Users\\Alik\\Documents\\Project\\FBOT\\PY\\FBot.py\\data\\XAUUSD\\D1\\"
-    base_path_linux = "/storage/emulated/0/Documents/Pydroid3/FBot/data/XAUUSD/D1/"
-    if os.name == 'nt':  # For Windows
-        # Define Windows-specific path
-        file_path = Path(base_path_win + file_name)
-    else:  # For Linux
-        # Define Termux
-        file_path = Path(base_path_linux + file_name)
-    return file_path
-    
-    
 def get_file_path(fileName, 
-        sub_path = "data/XAUUSD/D1/"):
+    sub_path = "data/XAUUSD/D1/"):
     data_file = sub_path + fileName
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    base_dir = os.path.abspath(os.path.join(current_dir, '..'))  
+    current_dir = os.path.dirname(os.path.    
+    abspath(__file__))
+    base_dir = os.path.abspath(os.path.
+    join(current_dir, '..'))  
     
     # Создаём полный путь к поддиректории
     full_path = os.path.join(base_dir, data_file)
-    
-    #if "Android" in platform.platform():
-#        print("Работаем на Termux.")
-    
     return full_path
     
+ 
+def quadricFunc1(vector):
+    return (np.dot(vector[:-2], vector[1:-1]) % 2) ^ vector[-1]
+
+
+def quadricFunc21(vector):
+    return np.dot(vector[:-1], vector[1:]) % 2
     
-# бент функции
-def bentFunc61(x):
-    return (x[0]&x[1])^(x[2]&x[3])^(x[3]&x[4])
-
-def bentFunc62(x):
-    return (x[0] & x[1] & x[2] ) ^\
-               (x[0] & x[3] ) ^ \
-               (x[1] & x[4] ) ^ \
-                (x[2] & x[5]) 
+   
+def quadricFunc22(vector):
+    return (np.dot(vector[:-1], vector[1:]) % 2) ^ vector[-2] ^ vector[-1]
+        
  
-def bentFunc63(x):
-     return (x[0] & x[1] & x[2]) ^ \
-     (x[1] & x[3] & x[4] ) ^\
-     (x[0] & x[1]) ^\
-     (x[0] & x[3]) ^\
-     (x[1] & x[5]) ^\
-     (x[2] & x[4]) ^\
-     (x[3] & x[4])  
-               
-def bentFunc64(x):
-    return (x[0] & x[1] & x[2]) ^\
-                (x[1] & x[3] & x[4]) ^ \
-                (x[2] & x[3] & x[5]) ^ \
-                (x[0] & x[3]) ^ \
-                (x[1] & x[5]) ^\
-                (x[2] & x[3]) ^\
-                (x[2] & x[4]) ^\
-                (x[2] & x[5]) ^ \
-                (x[3] & x[4]) ^ \
-                (x[3] & x[5] )
-                
-def bentFunc621(x):
-     return (x[0]&x[1]) ^ (x[2]&x[3]) ^ (x[3]&x[4]&x[5])
- 
- 
-def bentFunc81(v):
-    return (v[0] & v[1]) ^ (v[2] & v[3]) ^ (v[4] & v[5]) ^ (v[6] & v[7])
+NOT_LINE_FUNC =  quadricFunc1
+FUNC_NAME = NOT_LINE_FUNC.__name__
 
- 
-def bentFunc82(v):
-    return (v[0] & v[1] & v[2]) ^ (v[0] & v[3]) ^ (v[1] & v[4]) ^ (v[2] & v[5]) ^ (v[6] & v[7])
-
-  
-def bentFunc8_4(x):
-    result = (x[0] & x[1] & x[2] & x[3]) ^ \
-             (x[4] & x[5] & x[6] & x[7]) ^ \
-             (x[0] & x[1] & x[4] & x[5]) ^ \
-             (x[2] & x[3] & x[6] & x[7])
-
-    return result
- 
-BENT_FUNC =  bentFunc8_4
-FUNC_NAME = BENT_FUNC.__name__
-
-def affine_transform(x, x_size, x_size2,
-     bent_func, params):
-    n = x_size # Количество переменных
-    nn = x_size2
-    # Извлекаем подматрицу A из объединённого вектора params (размер n x n)
-    A_flat = params[:nn]
-    A = np.reshape(A_flat, (n, n))  # Преобразуем в матрицу размером n x n
-
-    # Извлекаем вектор b из объединённого вектора params (следующие n элементов)
-    b = params[nn:nn + n]
-    
-    # Извлекаем вектор c из объединённого вектора params (следующие n элементов)
-    c = params[nn + n:nn + 2*n]
-    
-    # Извлекаем скаляр d (последний элемент объединённого вектора params)
-    d = params[-1]
-
+def affine_transform(x, x_size, func, params):
+    n = x_size
+    A_flat = params
+    A = np.reshape(A_flat, (n, n)) 
     # Линейное преобразование Ax
-    Ax = np.dot(A, x)
-
-    # Добавляем вектор смещения b
-    Ax_b =(Ax + b) % 2
-    # Вычисляем значение Бент функции для преобразованных переменных
-    bent_value = bent_func(Ax_b) 
-
-    # Вычисляем скалярное произведение c ⋅ x
-    scalar_product = np.dot(c, x) % 2 # c ∘ x 
-
-    # Аффинное преобразование:
-    # f(Ax ⊕ b) ⊕ (c ⋅ x) ⊕ d
-    result = (bent_value + scalar_product + d) % 2
-    return result
+    Ax = np.dot(A, x) % 2
+    func_value = func(Ax) 
+    return func_value
 
 # Функция ошибки
-def approximation_error2(sequence, m, mm, q_values):
+def approximation_error2(sequence, m,q_values):
     n = len(sequence)
     mismatches = 0 
     steps = n - m
@@ -133,7 +56,7 @@ def approximation_error2(sequence, m, mm, q_values):
 
     for i in range(steps):
         x_window = sequence[i:i + m]
-        approx_value = affine_transform(x_window, m, mm, BENT_FUNC, q_values)
+        approx_value = affine_transform(x_window, m, NOT_LINE_FUNC, q_values)
         if approx_value != sequence[i + m]:
             mismatches += 1
             error_counter += 1
@@ -142,14 +65,14 @@ def approximation_error2(sequence, m, mm, q_values):
             error_counter = 0
     return (max_error_counter + mismatches / steps)
 
-def approximation_error(sequence, m, mm, q_values):
+def approximation_error(sequence, m, q_values):
     n = len(sequence)
     mismatches = 0 
     steps = n - m
 
     for i in range(steps):
         x_window = sequence[i:i + m]
-        approx_value = affine_transform(x_window, m, mm, BENT_FUNC, q_values)
+        approx_value = affine_transform(x_window, m, NOT_LINE_FUNC, q_values)
         if approx_value != sequence[i + m]:
             mismatches += 1
   
@@ -157,20 +80,19 @@ def approximation_error(sequence, m, mm, q_values):
 
 
 # Эвалюционная Функция
-def errorFunc(individual, sequence, m, mm):
-    # Функция для оценки ошибки на обучающей выборке
-    err = approximation_error(sequence, m, mm, individual)
+def errorFunc(individual, sequence, m):
+    err = approximation_error(sequence, m, individual)
     return [err]
         
-# Генерация хромосомы (коэффициенты для верхней треугольной матрицы)
+# Генерация хромосомы
 def create_individual1(m):
-    size = m+1  # Количество коэффициентов
+    size = m  # Количество коэффициентов
     size = size * size
     return [random.randint(0, 1) for _ in range(size)]
     
   
 def create_individual(m):
-    length = m+1
+    length = m
     length = length*length
     byte_array = os.urandom((length + 7) // 8)
     sequence = []
@@ -183,9 +105,7 @@ def create_individual(m):
 
 def selfTransform(size):
     diagonal_matrix = np.diag([1]*size)
-    flattened_array = diagonal_matrix.flatten()
-    flattened_array = list(flattened_array) + [0]*(2*size +1)
-    return flattened_array
+    return diagonal_matrix
     
     
 # Разделение данных на обучающую и тестовую выборки
@@ -196,7 +116,7 @@ def split_data(sequence, alpha):
 
 # Функция для  матрицы преобразования:
 def print_matrix(chromosome, m):
-    A_flat = chromosome[:m*m]
+    A_flat = chromosome
     matrix = np.reshape(A_flat, (m, m))
     print("Матрица преобразования:")
     for row in matrix:
@@ -207,8 +127,7 @@ def searchBinQuadraticForm(params):
     # Параметрcdы из словаря
     sequence = params['sequence']
     m = params['m']
-    m1  = m + 1
-    BitProba = 1./ m1*m1
+    BitProba = 1./ m*m
     # BitProba = 0.1;
     pop_size = params['pop_size']
     generations = params['generations']
@@ -218,6 +137,8 @@ def searchBinQuadraticForm(params):
     #period = params['period']
     mu = params['mu']
     lambda_ = params['lambda']
+    algo = params['algo']
+    mate  = params['mate']
     
     # Разделение на обучающую и тестовую выборки
     train_seq, test_seq = split_data(sequence, alpha)
@@ -231,25 +152,15 @@ def searchBinQuadraticForm(params):
     toolbox = base.Toolbox()
     toolbox.register("individual", tools.initIterate, creator.Individual, lambda: create_individual(m))
     toolbox.register("population", tools.initRepeat, list, toolbox.individual)
-    
-    
-    def partial_crossover(
-    parent1, parent2, start_idx, end_idx):
-   
-        segment1 = parent1[start_idx:end_idx + 1]
-        segment2 = parent2[start_idx:end_idx + 1]
-
-        segment1, segment2 = \
-        tools.cxPartialyMatched(
-        segment1, segment2)
-
-        offspring1 = parent1[:start_idx] + segment1 + parent1[end_idx + 1:]
-        offspring2 = parent2[:start_idx] + segment2 + parent2[end_idx + 1:]
-
-        return creator.Individual(offspring1),
-        creator.Individual(offspring2)
-        
-    toolbox.register("mate", tools.cxTwoPoint)
+         
+    if 1 == mate:   
+        toolbox.register("mate", tools.cxTwoPoint)
+    elif 2 == mate:
+        toolbox.register("mate", tools.cxUniform,
+        indpb=0.5)
+    elif 3 == mate:
+        toolbox.register("mate", tools.    
+        cxPartialyMatched)
     #toolbox.register("mate", partial_crossover, start_idx=0, end_idx=m*m)
     toolbox.register("mutate", tools.mutFlipBit, indpb=BitProba)
     #toolbox.register("mutate", tools.mutShuffleIndexes, indpb=BitProba)
@@ -257,7 +168,7 @@ def searchBinQuadraticForm(params):
     toolbox.register("select", tools.selBest)
     
     # Эволюционная функция
-    toolbox.register("evaluate", errorFunc, sequence=train_seq, m=m, mm=m*m)
+    toolbox.register("evaluate", errorFunc, sequence=train_seq, m=m)
 
     # Список для хранения статистики
     stats = tools.Statistics(lambda ind: ind.fitness.values)
@@ -266,8 +177,8 @@ def searchBinQuadraticForm(params):
     stats.register("avg", np.mean)
     
     # Проверка наличия файла с последней популяцией
-    pop_filename = get_file_path(FUNC_NAME + 'last_population.npy')
-    hof_filename =get_file_path(FUNC_NAME+'last_hof.npy')
+    pop_filename = get_file_path('result/'+FUNC_NAME+'_' + 'last_population.npy')
+    hof_filename =get_file_path('result/'+FUNC_NAME+'_'+'last_hof.npy')
     if os.path.exists(pop_filename):
         population1 = np.load(pop_filename, allow_pickle=True).tolist()
         population = [ creator.Individual( pop ) for pop in population1]
@@ -286,27 +197,29 @@ def searchBinQuadraticForm(params):
     hof = tools.HallOfFame(1)
 
     #--- Алгоритмы эволюции
-    #population, logbook = algorithms.eaSimple(
-#        population, toolbox,
-#        cxpb=cx_prob,
-#        mutpb=mut_prob,
-#        ngen=generations,
-#        stats=stats,
-#        halloffame=hof,
-#        verbose=True
-#    )
-    
-    population, logbook = algorithms.\
-        eaMuPlusLambda(
-         population, toolbox, 
-         mu = mu, 
-         lambda_ = lambda_,
-         cxpb=cx_prob, 
-         mutpb=mut_prob, 
-         ngen=generations,
-         stats=stats,
-         halloffame=hof,
-         verbose=True)
+    if 1 == algo:
+        population, logbook = algorithms.\
+            eaSimple(
+                population, toolbox,
+                cxpb=cx_prob,
+                mutpb=mut_prob,
+                ngen=generations,
+                stats=stats,
+                halloffame=hof,
+                verbose=True
+        )
+    elif 2 == algo:
+        population, logbook = algorithms.\
+            eaMuPlusLambda(
+             population, toolbox, 
+             mu = mu, 
+             lambda_ = lambda_,
+             cxpb=cx_prob, 
+             mutpb=mut_prob,    
+             ngen=generations,
+             stats=stats,
+             halloffame=hof,
+             verbose=True)
     
     # Сохранение последней популяции и лучшего результата
     np.save(pop_filename, population)
@@ -315,15 +228,15 @@ def searchBinQuadraticForm(params):
 
     # Оценка функции ошибки на тестовой выборке для лучшего результата
     #best_individual = hof[0]
-    train_error = errorFunc(hof[0], train_seq,m,m*m)[0]
+    train_error = errorFunc(hof[0], train_seq,m)[0]
     population.extend(hof)
     # Sesrch best for test in populate
     pop_set = list({tuple(po) for po in population})
-    test_errors = [errorFunc(x, test_seq, m, m*m)[0] for x in pop_set]
+    test_errors = [errorFunc(x, test_seq, m)[0] for x in pop_set]
     best_ind = np.argmin(test_errors)
     best_individual = pop_set[best_ind]
     test_error = test_errors[best_ind]
-    result_file = get_file_path('aprox_result.csv')
+    result_file = get_file_path('result/aprox_result.csv')
     # Сохранение результатов в CSV файл
     with open(result_file, 'a', newline='') as file:
         writer = csv.writer(file)
@@ -368,21 +281,22 @@ def test1():
     print_matrix(best_chromosome, params['m'])
 
 def test2():
-    rel_bin_filename         =get_file_path('bin_min_relative_change.npy')
+    rel_bin_filename = get_file_path('original/bin_min_relative_change.npy')
     seq = np.load(rel_bin_filename, allow_pickle=True).tolist()
     generations = 100
 # Пример вызова функции
     params = {
         'sequence': seq ,  # Бинарная послед.
-        'm': 8,  # Размер окна
-        'pop_size': 100,  # Размер популяции
-        'generations': generations,  # Кол. поколений
+        'm': 5,  # Размер окна
+        'pop_size': 200,  # Размер популяции
+        'generations': generations,  # Кол.поколений
         'cx_prob': 0.5,  # Вероятность скрещивания
         'mut_prob': 0.5,  # Вероятность мутации
-        'alpha': 0.8,  # Разбиение на обучающую и тестовую выборку
+        'alpha': 0.8,  # Разбиение на выборки
        'mu': 80,
-       'lambda': 60
-       # 'period':  generations //2 # сохранения
+       'lambda': 60,
+       'algo':  2, # идекс алгоритма,
+       'mate': 2 # индекс функции скрещиванияя
     }
     best_chromosome =             searchBinQuadraticForm(params)
     print_matrix(best_chromosome, params['m'])
@@ -394,6 +308,15 @@ def test3():
     seq = df['negative sign'].values.tolist()
     print(seq)
     
-    
+   
+def test4():
+    pop_filename = get_file_path('original/quadricFunc1_last_population.npy')
+    population = np.load(pop_filename, allow_pickle=True).tolist()
+    pop_set = list({tuple(po) for po in population})
+    print(len(pop_set))
+    for bp in pop_set:
+        print_matrix(bp, 5)
+
+   
 if __name__ == "__main__":
-    test2()
+    test4()
