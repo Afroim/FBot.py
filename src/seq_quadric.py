@@ -20,7 +20,11 @@ def get_file_path(fileName,
     # Создаём полный путь к поддиректории
     full_path = os.path.join(base_dir, data_file)
     return full_path
-    
+  
+
+def getMatrixes(fileName):
+     matrix = np.load(fileName, allow_pickle=True).tolist()
+     return matrix
  
 def quadricFunc1(vector):
     return (np.dot(vector[:-2], vector[1:-1]) % 2) ^ vector[-1]
@@ -33,9 +37,12 @@ def quadricFunc21(vector):
 def quadricFunc22(vector):
     return (np.dot(vector[:-1], vector[1:]) % 2) ^ vector[-2] ^ vector[-1]
         
- 
-NOT_LINE_FUNC =  quadricFunc21
-FUNC_NAME = NOT_LINE_FUNC.__name__
+MATRIX_REP =  getMatrixes(get_file_path('original/quadricFunc2122_best_population.npy'))   
+NOT_LINE_FUNC =  [
+        quadricFunc21,
+        quadricFunc22
+]
+FUNC_NAME = 'COMBIN'
 
 def affine_transform(x, x_size, func, params):
     n = x_size
@@ -47,67 +54,35 @@ def affine_transform(x, x_size, func, params):
     return func_value
 
 # Функция ошибки
-def approximation_error2(sequence, m,q_values):
+def approximation_error(sequence, wsize, indexes):
     n = len(sequence)
     mismatches = 0 
-    steps = n - m
-    error_counter = 0
-    max_error_counter = 0
-
+    steps = n - wsize
+    max_index = len(indexes)
     for i in range(steps):
-        x_window = sequence[i:i + m]
-        approx_value = affine_transform(x_window, m, NOT_LINE_FUNC, q_values)
-        if approx_value != sequence[i + m]:
-            mismatches += 1
-            error_counter += 1
-        else:
-            max_error_counter = max(max_error_counter, error_counter)
-            error_counter = 0
-    return (max_error_counter + mismatches / steps)
-
-def approximation_error(sequence, m, q_values):
-    n = len(sequence)
-    mismatches = 0 
-    steps = n - m
-
-    for i in range(steps):
-        x_window = sequence[i:i + m]
-        approx_value = affine_transform(x_window, m, NOT_LINE_FUNC, q_values)
-        if approx_value != sequence[i + m]:
+        x_window = sequence[i:i + wsize]
+        ind = indexes[i % max_index]
+        q_values = MATRIX_REP[ind]
+        func = NOT_LINE_FUNC[ind]
+        #print(q_values)
+        approx_value = affine_transform(x_window, wsize, func , q_values)
+        if approx_value != sequence[i + wsize]:
             mismatches += 1
   
     return ( mismatches / steps )
 
 
 # Эвалюционная Функция
-def errorFunc(individual, sequence, m):
-    err = approximation_error(sequence, m, individual)
+def errorFunc(individual, sequence, wsize):
+    err = approximation_error(sequence, wsize, individual)
     return [err]
         
 # Генерация хромосомы
-def create_individual1(m):
-    size = m  # Количество коэффициентов
-    size = size * size
-    return [random.randint(0, 1) for _ in range(size)]
+def create_individual(size):
+    m = len(MATRIX_REP) - 1
+    return [random.randint(0, m) for _ in range(size)]
     
-  
-def create_individual(m):
-    length = m
-    length = length*length
-    byte_array = os.urandom((length + 7) // 8)
-    sequence = []
-    for byte in byte_array:
-        for i in range(8):
-            if len(sequence) < length:
-                sequence.append((byte >> i) & 1)
-    return sequence
-    
-
-def selfTransform(size):
-    diagonal_matrix = np.diag([1]*size)
-    return diagonal_matrix
-    
-    
+ 
 # Разделение данных на обучающую и тестовую выборки
 def split_data(sequence, alpha):
     split_point = int(len(sequence) * alpha)
@@ -126,9 +101,10 @@ def print_matrix(chromosome, m):
 def searchBinQuadraticForm(params):
     # Параметрcdы из словаря
     sequence = params['sequence']
-    m = params['m']
-    BitProba = 1./ m*m
+    xsize = params['xsize']
+    BitProba = 1./ xsize
     # BitProba = 0.1;
+    wsize = params['win_size']
     pop_size = params['pop_size']
     generations = params['generations']
     cx_prob = params['cx_prob']
@@ -139,6 +115,7 @@ def searchBinQuadraticForm(params):
     lambda_ = params['lambda']
     algo = params['algo']
     mate  = params['mate']
+    mutate = params['mutate']
     
     # Разделение на обучающую и тестовую выборки
     train_seq, test_seq = split_data(sequence, alpha)
@@ -150,25 +127,29 @@ def searchBinQuadraticForm(params):
 
     # Создаем инструменты для генетического алгоритма
     toolbox = base.Toolbox()
-    toolbox.register("individual", tools.initIterate, creator.Individual, lambda: create_individual(m))
+    toolbox.register("individual", tools.initIterate, 
+    creator.Individual,
+    lambda: create_individual(xsize))
     toolbox.register("population", tools.initRepeat, list, toolbox.individual)
          
     if 1 == mate:   
-        toolbox.register("mate", tools.cxTwoPoint)
+        toolbox.register("mate", tools.cxOnePoint)
     elif 2 == mate:
         toolbox.register("mate", tools.cxUniform,
         indpb=0.5)
     elif 3 == mate:
         toolbox.register("mate", tools.    
         cxPartialyMatched)
-    #toolbox.register("mate", partial_crossover, start_idx=0, end_idx=m*m)
-    toolbox.register("mutate", tools.mutFlipBit, indpb=BitProba)
-    #toolbox.register("mutate", tools.mutShuffleIndexes, indpb=BitProba)
+    
+    if 1 == mutate:
+        toolbox.register("mutate", tools.mutShuffleIndexes, indpb=BitProba)
+    elif 2 == mutate:
+         toolbox.register("mutate", tools.mutUniformInt, low=0,up=len(MATRIX_REP)-1,indpb=BitProba)
     
     toolbox.register("select", tools.selBest)
     
     # Эволюционная функция
-    toolbox.register("evaluate", errorFunc, sequence=train_seq, m=m)
+    toolbox.register("evaluate", errorFunc, sequence=train_seq, wsize=wsize)
 
     # Список для хранения статистики
     stats = tools.Statistics(lambda ind: ind.fitness.values)
@@ -177,8 +158,8 @@ def searchBinQuadraticForm(params):
     stats.register("avg", np.mean)
     
     # Проверка наличия файла с последней популяцией
-    pop_filename = get_file_path('result/'+FUNC_NAME+'_' + 'last_population.npy')
-    hof_filename =get_file_path('result/'+FUNC_NAME+'_'+'last_hof.npy')
+    pop_filename = get_file_path('result/combin_population.npy')
+    hof_filename =get_file_path('result/combin_hof.npy')
     if os.path.exists(pop_filename):
         population1 = np.load(pop_filename, allow_pickle=True).tolist()
         population = [ creator.Individual( pop ) for pop in population1]
@@ -194,7 +175,7 @@ def searchBinQuadraticForm(params):
         print("New population created.")
 
     # Хранилише для хранения лучших хромосом
-    hof = tools.HallOfFame(1)
+    hof = tools.HallOfFame(10)
 
     #--- Алгоритмы эволюции
     if 1 == algo:
@@ -228,11 +209,11 @@ def searchBinQuadraticForm(params):
 
     # Оценка функции ошибки на тестовой выборке для лучшего результата
     #best_individual = hof[0]
-    train_error = errorFunc(hof[0], train_seq,m)[0]
+    train_error = errorFunc(hof[0], train_seq,wsize)[0]
     population.extend(hof)
     # Sesrch best for test in populate
     pop_set = list({tuple(po) for po in population})
-    test_errors = [errorFunc(x, test_seq, m)[0] for x in pop_set]
+    test_errors = [errorFunc(x, test_seq, wsize)[0] for x in pop_set]
     best_ind = np.argmin(test_errors)
     best_individual = pop_set[best_ind]
     test_error = test_errors[best_ind]
@@ -240,7 +221,7 @@ def searchBinQuadraticForm(params):
     # Сохранение результатов в CSV файл
     with open(result_file, 'a', newline='') as file:
         writer = csv.writer(file)
-        writer.writerow([FUNC_NAME,m,
+        writer.writerow([FUNC_NAME,wsize,
         train_error,
         stats.compile(population)['min'],
         test_error, alpha, best_individual])
@@ -256,70 +237,71 @@ def searchBinQuadraticForm(params):
     print(tabulate(data, headers="", tablefmt="plain", numalign="right"))
 
     return best_individual
+    
 
 def test1():
-    filename = get_file_path('XAUUSD-D1-DIFF.csv')
-    df = pd.read_csv(filename)
-    seq = df['negative sign'].values.tolist()
-
-    generations = 100
-# Пример вызова функции
-    params = {
-        'sequence': seq ,  # Бинарная послед.
-        'm': 6,  # Размер окна
-        'pop_size': 200,  # Размер популяции
-        'generations': generations,  # Кол. поколений
-        'cx_prob': 0.3,  # Вероятность скрещивания
-        'mut_prob': 0.5,  # Вероятность мутации
-        'alpha': 0.8,  # Разбиение на обучающую и тестовую выборку
-       'mu': 100,
-       'lambda': 70
-       # 'period':  generations //2 # сохранения
-    }
-
-    best_chromosome =             searchBinQuadraticForm(params)
-    print_matrix(best_chromosome, params['m'])
-
-def test2():
     rel_bin_filename = get_file_path('original/bin_min_relative_change.npy')
     seq = np.load(rel_bin_filename, allow_pickle=True).tolist()
     generations = 100
 # Пример вызова функции
     params = {
         'sequence': seq ,  # Бинарная послед.
-        'm': 6,  # Размер окна
+        'win_size': 6,  # Размер окна
+        'xsize': 20, # размер хромосомы
         'pop_size': 200,  # Размер популяции
         'generations': generations,  # Кол.поколений
         'cx_prob': 0.5,  # Вероятность скрещивания
         'mut_prob': 0.5,  # Вероятность мутации
         'alpha': 0.8,  # Разбиение на выборки
-       'mu': 80,
-       'lambda': 60,
-       'algo':  2, # идекс алгоритма,
-       'mate': 1 # индекс функции скрещиванияя
+       'mu': 200,
+       'lambda': 180,
+       'algo':  1, # идекс алгоритма,
+       'mate': 2, # индекс функции скрещиванияя
+       'mutate': 2 # индекс функции мутации
     }
     best_chromosome =             searchBinQuadraticForm(params)
-    print_matrix(best_chromosome, params['m'])
+    print(best_chromosome)   
 
 
-def test3():
-    filename = get_file_path('XAUUSD-D1-DIFF.csv')
-    df = pd.read_csv(filename)
-    seq = df['negative sign'].values.tolist()
-    print(seq)
+def test2():
+    wsize  = 6
+    rel_bin_filename = get_file_path('original/bin_min_relative_change.npy')
+    sequence = np.load(rel_bin_filename, allow_pickle=True).tolist()
+    funcs = [
+        quadricFunc21,
+        quadricFunc22
+    ]
+    n = len(sequence)
+    mismatches = 0 
+    steps = n - wsize
+    #steps = 4
+    errors = list()
+    for ind in range(len(MATRIX_REP)):
+        error = []
+        for i in range(steps):
+            x_window = sequence[i:i + wsize]
+            q_values = MATRIX_REP[ind]
+            #print(q_values)
+            A = np.reshape(q_values, (wsize, wsize))           
+        # Линейное преобразование Ax
+            Ax = np.dot(A, x_window) % 2
+           # print(Ax, quadricFunc1(Ax))
+            quadricFunc = funcs[ind]
+            error.append(quadricFunc(Ax))
+        errors.append(error)
     
-   
-def test4():
-    pop_filename = get_file_path('result/quadricFunc21_last_population.npy')
-    population = np.load(pop_filename, allow_pickle=True).tolist()
-    pop_set = list({tuple(po) for po in population})
-    print(len(pop_set))
-    pop_set.sort(key=sum)
-    pop_filename = get_file_path('original/quadricFunc21_best_population.npy')
-    np.save(pop_filename, pop_set)
-    for bp in pop_set:
-        print_matrix(bp, 6)
-
-   
+    A = np.reshape(MATRIX_REP[0], (wsize, wsize))
+    print(A)
+    print(errors[0][100:110])
+    
+    A = np.reshape(MATRIX_REP[1], (wsize, wsize))
+    print(A)
+    print(errors[1][100:110])
+    
+    #A = np.reshape(MATRIX_REP[2], (wsize, wsize))
+#    print(A)
+#    print(errors[2][100:110])
+        
+        
 if __name__ == "__main__":
-    test4()
+    test1()
