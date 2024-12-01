@@ -8,7 +8,7 @@ from tabulate import tabulate
 import pandas as pd
 
 
-def get_file_path(fileName):
+def get_file_path2(fileName):
     file_name = fileName
     base_path_win = "C:\\Users\\Alik\\Documents\\Project\\FBOT\\PY\\FBot.py\\data\\XAUUSD\\D1\\"
     base_path_linux = "/storage/emulated/0/Documents/Pydroid3/FBot/data/XAUUSD/D1/"
@@ -19,6 +19,19 @@ def get_file_path(fileName):
         # Define Termux
         file_path = Path(base_path_linux + file_name)
     return file_path
+    
+
+def get_file_path(fileName, 
+    sub_path = "data/XAUUSD/D1/original/"):
+    data_file = sub_path + fileName
+    current_dir = os.path.dirname(os.path.    
+    abspath(__file__))
+    base_dir = os.path.abspath(os.path.
+    join(current_dir, '..'))  
+    
+    # Создаём полный путь к поддиректории
+    full_path = os.path.join(base_dir, data_file)
+    return full_path
     
 
 filename = get_file_path('XAUUSD-D1-DIFF.csv')   
