@@ -32,9 +32,39 @@ def quadricFunc21(vector):
    
 def quadricFunc22(vector):
     return (np.dot(vector[:-1], vector[1:]) % 2) ^ vector[-2] ^ vector[-1]
+    
+    
+def bentFunc62(x):
+    return (x[0] & x[1] & x[2] ) ^\
+               (x[0] & x[3] ) ^ \
+               (x[1] & x[4] ) ^ \
+                (x[2] & x[5]) 
+                
+                
+def bentFunc63(x):
+     return (x[0] & x[1] & x[2]) ^ \
+     (x[1] & x[3] & x[4] ) ^\
+     (x[0] & x[1]) ^\
+     (x[0] & x[3]) ^\
+     (x[1] & x[5]) ^\
+     (x[2] & x[4]) ^\
+     (x[3] & x[4])  
+     
+               
+def bentFunc64(x):
+    return (x[0] & x[1] & x[2]) ^\
+                (x[1] & x[3] & x[4]) ^ \
+                (x[2] & x[3] & x[5]) ^ \
+                (x[0] & x[3]) ^ \
+                (x[1] & x[5]) ^\
+                (x[2] & x[3]) ^\
+                (x[2] & x[4]) ^\
+                (x[2] & x[5]) ^ \
+                (x[3] & x[4]) ^ \
+                (x[3] & x[5] )
         
  
-NOT_LINE_FUNC =  quadricFunc21
+NOT_LINE_FUNC =  bentFunc64
 FUNC_NAME = NOT_LINE_FUNC.__name__
 
 def affine_transform(x, x_size, func, params):
@@ -296,7 +326,7 @@ def test2():
        'mu': 80,
        'lambda': 60,
        'algo':  2, # идекс алгоритма,
-       'mate': 1 # индекс функции скрещиванияя
+       'mate': 2 # индекс функции скрещиванияя
     }
     best_chromosome =             searchBinQuadraticForm(params)
     print_matrix(best_chromosome, params['m'])
@@ -322,4 +352,4 @@ def test4():
 
    
 if __name__ == "__main__":
-    test4()
+    test2()
