@@ -1,13 +1,14 @@
+#pylint:disable=W0612
 #pylint:disable=E1101
 import os
-import platform
-from pathlib import Path
+#import platform
+#from pathlib import Path
 import numpy as np
 from deap import base, creator, tools, algorithms
 import random
 import csv
 from tabulate import tabulate
-import pandas as pd
+import joblib as jb
 
 def get_file_path(fileName, 
     sub_path = "data/XAUUSD/D1/"):
@@ -23,9 +24,15 @@ def get_file_path(fileName,
   
 
 def getMatrixes(fileName):
-     matrix = np.load(fileName, allow_pickle=True).tolist()
+     matrix = jb.load(fileName)
      return matrix
- 
+     
+def identity(value):
+    return value[0]
+    
+def randomizer(_):
+    return random.randint(0, 1)     
+     
 def quadricFunc1(vector):
     return (np.dot(vector[:-2], vector[1:-1]) % 2) ^ vector[-1]
 
@@ -49,18 +56,22 @@ def bentFunc64(x):
                 (x[2] & x[5]) ^ \
                 (x[3] & x[4]) ^ \
                 (x[3] & x[5] )
-        
-MATRIX_REP =  getMatrixes(get_file_path('original/quadricFunc212264_best_population.npy'))   
-NOT_LINE_FUNC =  [
-        quadricFunc21,
-        quadricFunc22,
-        bentFunc64
-]
-FUNC_NAME = 'COMBIN'
 
-def affine_transform(x, x_size, func, params):
+# Глобальный словарь с размерами окон
+WINDOW_SIZES = [ 3, 5, 7]
+MAX_WIN_SIZE = max(WINDOW_SIZES)
+                 
+MATRIX_REP =  getMatrixes(get_file_path('original/quadricFunc1357_best_population.jb'))   
+FUNCS =  [ 
+    quadricFunc1, quadricFunc1, quadricFunc1
+]
+FUNC_NAME = 'CH_WIN'
+
+def affine_transform(x, x_size, func, trMatrix):
+    if x_size < 2:
+        return func(x)
     n = x_size
-    A_flat = params
+    A_flat = trMatrix
     A = np.reshape(A_flat, (n, n)) 
     # Линейное преобразование Ax
     Ax = np.dot(A, x) % 2
@@ -68,7 +79,42 @@ def affine_transform(x, x_size, func, params):
     return func_value
 
 # Функция ошибки
-def approximation_error(sequence, wsize, indexes):
+def approximation_error(sequence, indexes):
+    
+    max_win_size = 7
+    n = len(sequence)
+    isize = len(indexes)
+    
+    idx  = 0
+    sidx = indexes[idx]
+    end = max_win_size
+    wsize = WINDOW_SIZES[sidx]   
+    start = end - wsize
+    func = FUNCS[indexes[idx]]
+    tr_matrix = MATRIX_REP[sidx]
+    mismatches = 0
+    while end < n: 
+        x_window = sequence[start:end]
+        #print(wsize, start, end,func.__name__)     
+        forecast = affine_transform(
+            x_window, wsize,func, tr_matrix)      
+        
+        if forecast != sequence[end]:
+            mismatches += 1
+            
+        idx +=1 
+        sidx = indexes[idx%isize]
+        wsize = WINDOW_SIZES[sidx]
+        func = FUNCS[sidx]
+        tr_matrix = MATRIX_REP[sidx]
+        end +=1
+        start = end - wsize
+        
+    # print(mismatches, idx)
+    return mismatches/idx
+
+
+def approximation_error1(sequence, wsize, indexes):
     n = len(sequence)
     mismatches = 0 
     steps = n - wsize
@@ -87,8 +133,8 @@ def approximation_error(sequence, wsize, indexes):
 
 
 # Эвалюционная Функция
-def errorFunc(individual, sequence, wsize):
-    err = approximation_error(sequence, wsize, individual)
+def errorFunc(individual, sequence):
+    err = approximation_error(sequence, individual)
     return [err]
         
 # Генерация хромосомы
@@ -163,7 +209,7 @@ def searchBinQuadraticForm(params):
     toolbox.register("select", tools.selBest)
     
     # Эволюционная функция
-    toolbox.register("evaluate", errorFunc, sequence=train_seq, wsize=wsize)
+    toolbox.register("evaluate", errorFunc, sequence=train_seq)
 
     # Список для хранения статистики
     stats = tools.Statistics(lambda ind: ind.fitness.values)
@@ -172,7 +218,7 @@ def searchBinQuadraticForm(params):
     stats.register("avg", np.mean)
     
     # Проверка наличия файла с последней популяцией
-    pop_filename = get_file_path('result/combin_population.npy')
+    pop_filename = get_file_path('result/com_seq_population.npy')
   
     if os.path.exists(pop_filename):
         population1 = np.load(pop_filename, allow_pickle=True).tolist()
@@ -225,12 +271,12 @@ def searchBinQuadraticForm(params):
     print(f"Final population  saved with {final_size} records.")
     # Оценка функции ошибки на тестовой 
     # выборке для лучшего результата
-    test_errors = [errorFunc(x, test_seq, wsize)[0]
+    test_errors = [errorFunc(x, test_seq)[0]
      for x in pop_set]
     best_ind = np.argmin(test_errors)
     best_individual = pop_set[best_ind]
     test_error = test_errors[best_ind]
-    train_error = errorFunc(best_individual, train_seq,wsize)[0]
+    train_error = errorFunc(best_individual, train_seq)[0]
     result_file = get_file_path('log/aprox_result.csv')
     # Сохранение результатов в CSV файл
     with open(result_file, 'a', newline='') as file:
@@ -256,21 +302,21 @@ def searchBinQuadraticForm(params):
 def test1():
     rel_bin_filename = get_file_path('original/bin_min_relative_change.npy')
     seq = np.load(rel_bin_filename, allow_pickle=True).tolist()
-    generations = 20
+    generations = 10
 # Пример вызова функции
     params = {
         'sequence': seq ,  # Бинарная послед.
-        'win_size': 6,  # Размер окна
-        'xsize': 20, # размер хромосомы
-        'pop_size': 320,  # Размер популяции
+        'win_size': 0,  # Размер окна
+        'xsize': 80, # размер хромосомы
+        'pop_size': 200,  # Размер популяции
         'generations': generations,  # Кол.поколений
-        'cx_prob': 0.5,  # Вероятность скрещивания
-        'mut_prob': 0.5,  # Вероятность мутации
+        'cx_prob': 0.1,  # Вероятность скрещивания
+        'mut_prob': 0.9,  # Вероятность мутации
         'alpha': 0.8,  # Разбиение на выборки
-       'mu': 320,
-       'lambda': 160,
+       'mu': 120,
+       'lambda': 70,
        'algo':  2, # идекс алгоритма,
-       'mate': 1, # индекс функции скрещиванияя
+       'mate': 2, # индекс функции скрещиванияя
        'mutate': 2 # индекс функции мутации
     }
     best_chromosome =             searchBinQuadraticForm(params)
@@ -278,41 +324,19 @@ def test1():
 
 
 def test2():
-    wsize  = 6
-    rel_bin_filename = get_file_path('original/bin_min_relative_change.npy')
-    sequence = np.load(rel_bin_filename, allow_pickle=True).tolist()
-    funcs = [
-        quadricFunc21,
-        quadricFunc22,
-        bentFunc64
-    ]
-    n = len(sequence)
-    mismatches = 0 
-    steps = n - wsize
-    #steps = 4
-    errors = list()
-    for ind in range(len(MATRIX_REP)):
-        error = []
-        for i in range(steps):
-            x_window = sequence[i:i + wsize]
-            q_values = MATRIX_REP[ind]
-            #print(q_values)
-            A = np.reshape(q_values, (wsize, wsize))           
-        # Линейное преобразование Ax
-            Ax = np.dot(A, x_window) % 2
-           # print(Ax, quadricFunc1(Ax))
-            quadricFunc = funcs[ind]
-            error.append(quadricFunc(Ax))
-        errors.append(error)
-    for ind in range(len(MATRIX_REP)):
-        A = np.reshape(MATRIX_REP[ind], (wsize, wsize))
-        print(A)
-        print(errors[ind][100:110])
-    
-    #A = np.reshape(MATRIX_REP[2], (wsize, wsize))
-#    print(A)
-#    print(errors[2][100:110])
-        
-        
+     alpha = 0.8
+     rel_bin_filename = get_file_path('original/bin_min_relative_change.npy')
+     seq = np.load(rel_bin_filename, allow_pickle=True).tolist()
+     train_seq, test_seq = split_data(seq, alpha)
+     #indexes = create_individual(100)
+     #indexes = [2,2,1,0,1,1,2,0]
+     indexes = [2,1,0,1,1,2,0,2]
+     error = approximation_error(train_seq, indexes)
+     err2 = approximation_error(test_seq, indexes)
+     print(' Train error =', error)  
+     print(' Test error =', err2)  
+     print(indexes)
+     
+     
 if __name__ == "__main__":
     test1()
