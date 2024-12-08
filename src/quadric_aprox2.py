@@ -1,3 +1,5 @@
+#pylint:disable=W0603
+#pylint:disable=W0613
 #pylint:disable=E1101
 import os
 import platform
@@ -21,6 +23,17 @@ def get_file_path(fileName,
     full_path = os.path.join(base_dir, data_file)
     return full_path
     
+def identity(x):
+    return x[0]
+    
+    
+def identity2(x):
+    return x[-1]
+    
+    
+def linearFunc(x):
+    return np.bitwise_xor.reduce(x)
+        
  
 def quadricFunc1(vector):
     return (np.dot(vector[:-2], vector[1:-1]) % 2) ^ vector[-1]
@@ -34,24 +47,24 @@ def quadricFunc22(vector):
     return (np.dot(vector[:-1], vector[1:]) % 2) ^ vector[-2] ^ vector[-1]
     
     
-def bentFunc62(x):
+def bentFunc72(x):
     return (x[0] & x[1] & x[2] ) ^\
                (x[0] & x[3] ) ^ \
                (x[1] & x[4] ) ^ \
-                (x[2] & x[5]) 
+                (x[2] & x[5]) ^x[6]
                 
                 
-def bentFunc63(x):
+def bentFunc73(x):
      return (x[0] & x[1] & x[2]) ^ \
      (x[1] & x[3] & x[4] ) ^\
      (x[0] & x[1]) ^\
      (x[0] & x[3]) ^\
      (x[1] & x[5]) ^\
      (x[2] & x[4]) ^\
-     (x[3] & x[4])  
+     (x[3] & x[4]) ^x[6]
      
                
-def bentFunc64(x):
+def bentFunc74(x):
     return (x[0] & x[1] & x[2]) ^\
                 (x[1] & x[3] & x[4]) ^ \
                 (x[2] & x[3] & x[5]) ^ \
@@ -61,13 +74,19 @@ def bentFunc64(x):
                 (x[2] & x[4]) ^\
                 (x[2] & x[5]) ^ \
                 (x[3] & x[4]) ^ \
-                (x[3] & x[5] )
+                (x[3] & x[5] ) ^x[6]
+     
+def bentTrio1(x):
+     if 0 in x:
+         return quadricFunc1(x)
+     else:
+         return 1 ^ quadricFunc1(x)
         
- 
-NOT_LINE_FUNC =  bentFunc64
-FUNC_NAME = NOT_LINE_FUNC.__name__
 
-def affine_transform(x, x_size, func, params):
+def identity_transform(x, x_size, func, params):
+    return func(x)
+    
+def linear_transform(x, x_size, func, params):
     n = x_size
     A_flat = params
     A = np.reshape(A_flat, (n, n)) 
@@ -76,6 +95,69 @@ def affine_transform(x, x_size, func, params):
     func_value = func(Ax) 
     return func_value
 
+ 
+def affine_transform_1(x, x_size,
+     bent_func, params):
+    n = x_size # Количество переменных
+    nn = n * n
+    # Извлекаем подматрицу A 
+    A_flat = params[:nn]
+    A = np.reshape(A_flat, (n, n))
+
+    # Извлекаем вектор b
+    b = params[nn:nn + n]
+
+    # Линейное преобразование Ax
+    Ax = np.dot(A, x) % 2
+
+    # Добавляем вектор смещения b
+    Ax_b =(Ax + b) % 2
+    # Вычисляем значение бинарной функции для преобразованных переменных
+    result = bent_func(Ax_b) 
+
+    return result
+     
+    
+def affine_transform_2(x, x_size,
+     bent_func, params):
+    n = x_size # Количество переменных
+    nn = n * n
+    # Извлекаем подматрицу A 
+    A_flat = params[:nn]
+    A = np.reshape(A_flat, (n, n))
+
+    # Извлекаем вектор b
+    b = params[nn:nn + n]
+    
+    # Извлекаем вектор c 
+    c = params[nn + n:nn + 2*n]
+    
+    # Извлекаем скаляр d 
+    d = params[-1]
+
+    # Линейное преобразование Ax
+    Ax = np.dot(A, x) % 2
+
+    # Добавляем вектор смещения b
+    Ax_b =(Ax + b) % 2
+    # Вычисляем значение Бент функции для преобразованных переменных
+    bent_value = bent_func(Ax_b) 
+
+    # Вычисляем скалярное произведение c ⋅ x
+    scalar_product = np.dot(c, x) % 2 # c ∘ x 
+
+    # Аффинное преобразование:
+    # f(Ax ⊕ b) ⊕ (c ⋅ x) ⊕ d
+    result = (bent_value + scalar_product + d) % 2
+    return result
+    
+# Global Setting
+FUNCTOR =  (
+affine_transform_1, bentTrio1
+#affine_transform_adv, quadricFunc21
+)
+FUNC_NAME = FUNCTOR[1].__name__
+
 # Функция ошибки
 def approximation_error2(sequence, m,q_values):
     n = len(sequence)
@@ -83,10 +165,11 @@ def approximation_error2(sequence, m,q_values):
     steps = n - m
     error_counter = 0
     max_error_counter = 0
-
+    affineTransform = FUNCTOR[0]
+    func = FUNCTOR[1]
     for i in range(steps):
         x_window = sequence[i:i + m]
-        approx_value = affine_transform(x_window, m, NOT_LINE_FUNC, q_values)
+        approx_value = affineTransform(x_window, m, func, q_values)
         if approx_value != sequence[i + m]:
             mismatches += 1
             error_counter += 1
@@ -99,10 +182,11 @@ def approximation_error(sequence, m, q_values):
     n = len(sequence)
     mismatches = 0 
     steps = n - m
-
+    affineTransform = FUNCTOR[0]
+    func = FUNCTOR[1]
     for i in range(steps):
         x_window = sequence[i:i + m]
-        approx_value = affine_transform(x_window, m, NOT_LINE_FUNC, q_values)
+        approx_value = affineTransform(x_window, m, func, q_values)
         if approx_value != sequence[i + m]:
             mismatches += 1
   
@@ -115,15 +199,12 @@ def errorFunc(individual, sequence, m):
     return [err]
         
 # Генерация хромосомы
-def create_individual1(m):
-    size = m  # Количество коэффициентов
-    size = size * size
+def create_individual1(size):
     return [random.randint(0, 1) for _ in range(size)]
     
-  
-def create_individual(m):
-    length = m
-    length = length*length
+    
+def create_individual(size):
+    length = size
     byte_array = os.urandom((length + 7) // 8)
     sequence = []
     for byte in byte_array:
@@ -131,22 +212,15 @@ def create_individual(m):
             if len(sequence) < length:
                 sequence.append((byte >> i) & 1)
     return sequence
-    
-
-def selfTransform(size):
-    diagonal_matrix = np.diag([1]*size)
-    return diagonal_matrix
-    
-    
+      
 # Разделение данных на обучающую и тестовую выборки
 def split_data(sequence, alpha):
     split_point = int(len(sequence) * alpha)
     return sequence[:split_point], sequence[split_point:]
     
-
 # Функция для  матрицы преобразования:
 def print_matrix(chromosome, m):
-    A_flat = chromosome
+    A_flat = chromosome[:m*m]
     matrix = np.reshape(A_flat, (m, m))
     print("Матрица преобразования:")
     for row in matrix:
@@ -157,7 +231,8 @@ def searchBinQuadraticForm(params):
     # Параметрcdы из словаря
     sequence = params['sequence']
     m = params['m']
-    BitProba = 1./ m*m
+    ind_size = params['ind_size']
+    BitProba = 1./ ind_size
     # BitProba = 0.1;
     pop_size = params['pop_size']
     generations = params['generations']
@@ -180,7 +255,9 @@ def searchBinQuadraticForm(params):
 
     # Создаем инструменты для генетического алгоритма
     toolbox = base.Toolbox()
-    toolbox.register("individual", tools.initIterate, creator.Individual, lambda: create_individual(m))
+    toolbox.register("individual",
+        tools.initIterate, creator.Individual,         
+        lambda:create_individual(ind_size))
     toolbox.register("population", tools.initRepeat, list, toolbox.individual)
          
     if 1 == mate:   
@@ -191,6 +268,8 @@ def searchBinQuadraticForm(params):
     elif 3 == mate:
         toolbox.register("mate", tools.    
         cxPartialyMatched)
+    elif 4 == mate:
+         toolbox.register("mate", tools.cxOnePoint)
     #toolbox.register("mate", partial_crossover, start_idx=0, end_idx=m*m)
     toolbox.register("mutate", tools.mutFlipBit, indpb=BitProba)
     #toolbox.register("mutate", tools.mutShuffleIndexes, indpb=BitProba)
@@ -207,10 +286,10 @@ def searchBinQuadraticForm(params):
     stats.register("avg", np.mean)
     
     # Проверка наличия файла с последней популяцией
-    pop_filename = get_file_path('result/'+FUNC_NAME+'_' + 'last_population.npy')
-    hof_filename =get_file_path('result/'+FUNC_NAME+'_'+'last_hof.npy')
+    pop_filename = get_file_path(f'result/{FUNC_NAME}_last_pop_w{m}_{ind_size}.npy')
     if os.path.exists(pop_filename):
         population1 = np.load(pop_filename, allow_pickle=True).tolist()
+        population1 = list({tuple(po) for po in population1})
         population = [ creator.Individual( pop ) for pop in population1]
         print("Population loaded from file.")
         # Проверка размера загруженной популяции
@@ -251,22 +330,22 @@ def searchBinQuadraticForm(params):
              halloffame=hof,
              verbose=True)
     
-    # Сохранение последней популяции и лучшего результата
-    np.save(pop_filename, population)
-    np.save(hof_filename, hof)
-    print("Final population and best individual saved.")
-
-    # Оценка функции ошибки на тестовой выборке для лучшего результата
-    #best_individual = hof[0]
-    train_error = errorFunc(hof[0], train_seq,m)[0]
     population.extend(hof)
-    # Sesrch best for test in populate
     pop_set = list({tuple(po) for po in population})
-    test_errors = [errorFunc(x, test_seq, m)[0] for x in pop_set]
+     # Сохранение последней популяции
+    np.save(pop_filename, pop_set)
+    final_size = len(pop_set)
+    print(f"Final population  saved with {final_size} records.")
+    # Оценка функции ошибки на тестовой 
+    # выборке для лучшего результата
+    test_errors = [errorFunc(x, test_seq, m)[0]
+     for x in pop_set]
     best_ind = np.argmin(test_errors)
     best_individual = pop_set[best_ind]
     test_error = test_errors[best_ind]
+    train_error = errorFunc(best_individual, train_seq,m)[0]
     result_file = get_file_path('log/aprox_result.csv')
+    
     # Сохранение результатов в CSV файл
     with open(result_file, 'a', newline='') as file:
         writer = csv.writer(file)
@@ -313,11 +392,12 @@ def test1():
 def test2():
     rel_bin_filename = get_file_path('original/bin_min_relative_change.npy')
     seq = np.load(rel_bin_filename, allow_pickle=True).tolist()
-    generations = 100
+    generations = 20
 # Пример вызова функции
     params = {
         'sequence': seq ,  # Бинарная послед.
-        'm': 6,  # Размер окна
+        'm': 5,  # Размер окна
+        'ind_size': 30,
         'pop_size': 200,  # Размер популяции
         'generations': generations,  # Кол.поколений
         'cx_prob': 0.5,  # Вероятность скрещивания
@@ -349,6 +429,20 @@ def test4():
     np.save(pop_filename, pop_set)
     for bp in pop_set:
         print_matrix(bp, 6)
+        
+        
+def test5():
+    global FUNCTOR 
+    FUNCTOR = (identity_transform, identity)
+    rel_bin_filename = get_file_path('original/bin_min_relative_change.npy')
+    seq = np.load(rel_bin_filename, allow_pickle=True).tolist()
+    alpha = 0.8
+    train_seq, test_seq = split_data(seq, alpha)
+    m = 1
+ 
+    error_train = approximation_error(train_seq, m, [1])
+    error_test = approximation_error(test_seq, m, [1])
+    print('error >>', error_train, error_test )
 
    
 if __name__ == "__main__":
