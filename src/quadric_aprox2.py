@@ -26,6 +26,11 @@ def get_file_path(fileName,
 def identity(x):
     return x[0]
     
+    
+def identity2(x):
+    return 1^x[0]
+    
+    
 def linearFunc(x):
     return np.bitwise_xor.reduce(x)
         
@@ -85,7 +90,30 @@ def bentTrio22(x):
     else:
         return 1 ^ quadricFunc22(x) 
 
+
+def bentTrio13(x):
+  if 0 in x[0:3]:
+      return quadricFunc1(x)
+  else:
+      return 1 ^ quadricFunc1(x)
+      
+  
+def bentNotTrio1(x):
+     if 1 in x:
+         return quadricFunc1(x)
+     else:
+         return 1 ^ quadricFunc1(x)
+         
+    
+def notBentTrio1(x):
+        return 1^ bentTrio1(x)
         
+def bentTrio22(x):
+     if 0 in x:
+         return quadricFunc22(x)
+     else:
+         return 1 ^ quadricFunc22(x)
+
 
 def identity_transform(x, x_size, func, params):
     return func(x)
@@ -157,7 +185,7 @@ def affine_transform_2(x, x_size,
     
 # Global Setting
 FUNCTOR =  (
-affine_transform_1, bentTrio1
+affine_transform_1, bentTrio22
 #affine_transform_adv, quadricFunc21
 )
 FUNC_NAME = FUNCTOR[1].__name__
@@ -409,17 +437,17 @@ def test2():
 # Пример вызова функции
     params = {
         'sequence': seq ,  # Бинарная послед.
-        'm': 5,  # Размер окна
-        'ind_size': 30,
+        'm': 4,  # Размер окна
+        'ind_size': 20,
         'pop_size': 200,  # Размер популяции
         'generations': generations,  # Кол.поколений
-        'cx_prob': 0.5,  # Вероятность скрещивания
-        'mut_prob': 0.5,  # Вероятность мутации
+        'cx_prob': 0.1,  # Вероятность скрещивания
+        'mut_prob': 0.9,  # Вероятность мутации
         'alpha': 0.8,  # Разбиение на выборки
        'mu': 80,
        'lambda': 60,
        'algo':  2, # идекс алгоритма,
-       'mate': 2 # индекс функции скрещиванияя
+       'mate': 4 # индекс функции скрещиванияя
     }
     best_chromosome =             searchBinQuadraticForm(params)
     print_matrix(best_chromosome, params['m'])
@@ -451,7 +479,7 @@ def test5():
     seq = np.load(rel_bin_filename, allow_pickle=True).tolist()
     alpha = 0.8
     train_seq, test_seq = split_data(seq, alpha)
-    m = 1
+    m = 8
  
     error_train = approximation_error(train_seq, m, [1])
     error_test = approximation_error(test_seq, m, [1])
@@ -506,3 +534,4 @@ def test6():
    
 if __name__ == "__main__":
     test6()
+

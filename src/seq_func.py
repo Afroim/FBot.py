@@ -271,8 +271,7 @@ def searchBinQuadraticForm(params):
     print(f"Final population  saved with {final_size} records.")
     # Оценка функции ошибки на тестовой 
     # выборке для лучшего результата
-    test_errors = [errorFunc(x, test_seq)[0]
-     for x in pop_set]
+    test_errors = [errorFunc(x, test_seq)[0] for x in pop_set]
     best_ind = np.argmin(test_errors)
     best_individual = pop_set[best_ind]
     test_error = test_errors[best_ind]
