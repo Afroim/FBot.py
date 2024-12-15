@@ -26,11 +26,6 @@ def get_file_path(fileName,
 def identity(x):
     return x[0]
     
-    
-def identity2(x):
-    return x[-1]
-    
-    
 def linearFunc(x):
     return np.bitwise_xor.reduce(x)
         
@@ -75,12 +70,21 @@ def bentFunc74(x):
                 (x[2] & x[5]) ^ \
                 (x[3] & x[4]) ^ \
                 (x[3] & x[5] ) ^x[6]
+
      
 def bentTrio1(x):
      if 0 in x:
          return quadricFunc1(x)
      else:
          return 1 ^ quadricFunc1(x)
+
+
+def bentTrio22(x):
+    if 0 in x:
+        return quadricFunc22(x)
+    else:
+        return 1 ^ quadricFunc22(x) 
+
         
 
 def identity_transform(x, x_size, func, params):
@@ -243,38 +247,47 @@ def searchBinQuadraticForm(params):
     mu = params['mu']
     lambda_ = params['lambda']
     algo = params['algo']
-    mate  = params['mate']
+    mate = params['mate']
+    selection = params['selection']
     
     # Разделение на обучающую и тестовую выборки
     train_seq, test_seq = split_data(sequence, alpha)
     #train_seq = test_seq
     
     # Создание начальной популяции
+    if hasattr(creator, "FitnessMin"):
+        del creator.FitnessMin
+
     creator.create("FitnessMin", base.Fitness, weights=(-1.0,))
+
+    if hasattr(creator, "Individual"):
+        del creator.Individual
+
     creator.create("Individual", list, fitness=creator.FitnessMin)
 
     # Создаем инструменты для генетического алгоритма
     toolbox = base.Toolbox()
-    toolbox.register("individual",
+    toolbox.register("individual", 
         tools.initIterate, creator.Individual,         
         lambda:create_individual(ind_size))
     toolbox.register("population", tools.initRepeat, list, toolbox.individual)
          
-    if 1 == mate:   
+    if 0 == mate:   
         toolbox.register("mate", tools.cxTwoPoint)
-    elif 2 == mate:
+    elif 1 == mate:
         toolbox.register("mate", tools.cxUniform,
         indpb=0.5)
-    elif 3 == mate:
-        toolbox.register("mate", tools.    
-        cxPartialyMatched)
-    elif 4 == mate:
+    elif 2 == mate:
          toolbox.register("mate", tools.cxOnePoint)
-    #toolbox.register("mate", partial_crossover, start_idx=0, end_idx=m*m)
-    toolbox.register("mutate", tools.mutFlipBit, indpb=BitProba)
-    #toolbox.register("mutate", tools.mutShuffleIndexes, indpb=BitProba)
+    # elif 4 == mate:
+    #     toolbox.register("mate", tools.cxPartialyMatched)
     
-    toolbox.register("select", tools.selBest)
+    toolbox.register("mutate", tools.mutFlipBit, indpb=BitProba)
+
+    if 0 == selection: 
+        toolbox.register("select", tools.selBest)
+    elif 1 == selection: 
+        toolbox.register("select", tools.selTournament, tournsize=3)
     
     # Эволюционная функция
     toolbox.register("evaluate", errorFunc, sequence=train_seq, m=m)
@@ -444,6 +457,52 @@ def test5():
     error_test = approximation_error(test_seq, m, [1])
     print('error >>', error_train, error_test )
 
+
+def test6():
+    global FUNCTOR, FUNC_NAME
+    FUNCTOR = (affine_transform_1, bentTrio22)
+    FUNC_NAME = FUNCTOR[1].__name__
+
+
+    rel_bin_filename = get_file_path('original/bin_min_relative_change.npy')
+    seq = np.load(rel_bin_filename, allow_pickle=True).tolist()
+    epoch = 0
+    cx_probs = [0.5, 0.3]
+    mut_probs = [0.5, 0.7]
+    mates = [0, 1, 2]
+    selections = [0, 1]
+
+    while epoch < 14:
+        generations = 7
+        pop_size = 200
+        
+        proba_index = random.randint(0,1)
+        cx_prob = cx_probs[proba_index]
+        mut_prob = 1 - cx_prob
+        mate = mates[random.randint(0,2)] 
+        selection = selections[random.randint(0,1)]
+        print(f'epoch --> {epoch}')
+        print(f'mate={mate}~({cx_prob},{mut_prob}), selection={selection}')
+
+        params = {
+            'sequence': seq,  # Бинарная послед.
+            'm': 4,  # Размер окна
+            'ind_size': 20,
+            'pop_size': pop_size,  # Размер популяции
+            'generations': generations,  # Кол.поколений
+            'cx_prob': cx_prob,  # Вероятность скрещивания
+            'mut_prob': mut_prob,  # Вероятность мутации
+            'alpha': 0.8,  # Разбиение на выборки
+            'mu': 80,
+            'lambda': 60,
+            'algo': 2, # идекс алгоритма,
+            'mate': mate, # индекс функции скрещиванияя
+            'selection': selection
+        }
+        best_chromosome = searchBinQuadraticForm(params)
+        print_matrix(best_chromosome, params['m'])
+        epoch += 1
+
    
 if __name__ == "__main__":
-    test2()
+    test6()
