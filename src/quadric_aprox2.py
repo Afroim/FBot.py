@@ -28,7 +28,7 @@ def identity(x):
     
     
 def identity2(x):
-    return x[-1]
+    return 1^x[0]
     
     
 def linearFunc(x):
@@ -81,22 +81,31 @@ def bentTrio1(x):
          return quadricFunc1(x)
      else:
          return 1 ^ quadricFunc1(x)
+         
 
-
-def bentTrio21(x):
-    if 0 in x:
-         return quadricFunc21(x)
-    else:
-         return 1 ^ quadricFunc21(x)
-
-
+def bentTrio13(x):
+  if 0 in x[0:3]:
+      return quadricFunc1(x)
+  else:
+      return 1 ^ quadricFunc1(x)
+      
+  
+def bentNotTrio1(x):
+     if 1 in x:
+         return quadricFunc1(x)
+     else:
+         return 1 ^ quadricFunc1(x)
+         
+    
+def notBentTrio1(x):
+        return 1^ bentTrio1(x)
+        
 def bentTrio22(x):
-    if 0 in x:
+     if 0 in x:
          return quadricFunc22(x)
-    else:
+     else:
          return 1 ^ quadricFunc22(x)
-
-
+           
         
 
 def identity_transform(x, x_size, func, params):
@@ -169,7 +178,7 @@ def affine_transform_2(x, x_size,
     
 # Global Setting
 FUNCTOR =  (
-affine_transform_1, bentTrio21
+affine_transform_1, bentTrio22
 #affine_transform_adv, quadricFunc21
 )
 FUNC_NAME = FUNCTOR[1].__name__
@@ -412,50 +421,20 @@ def test2():
 # Пример вызова функции
     params = {
         'sequence': seq ,  # Бинарная послед.
-        'm': 7,  # Размер окна
-        'ind_size': 56,
+        'm': 4,  # Размер окна
+        'ind_size': 20,
         'pop_size': 200,  # Размер популяции
         'generations': generations,  # Кол.поколений
-        'cx_prob': 0.5,  # Вероятность скрещивания
-        'mut_prob': 0.5,  # Вероятность мутации
+        'cx_prob': 0.1,  # Вероятность скрещивания
+        'mut_prob': 0.9,  # Вероятность мутации
         'alpha': 0.8,  # Разбиение на выборки
        'mu': 80,
        'lambda': 60,
        'algo':  2, # идекс алгоритма,
-       'mate': 2 # индекс функции скрещиванияя
+       'mate': 4 # индекс функции скрещиванияя
     }
-    best_chromosome = searchBinQuadraticForm(params)
+    best_chromosome =             searchBinQuadraticForm(params)
     print_matrix(best_chromosome, params['m'])
-
-
-def test6():
-    rel_bin_filename = get_file_path('original/bin_min_relative_change.npy')
-    seq = np.load(rel_bin_filename, allow_pickle=True).tolist()
-    epoch = 0
-    cx_probs = [0.5]*9 + [0.3]*5
-    mut_probs = [0.5]*9 + [0.7]*5
-    mates = [2]*9 + [1]*5
-    while epoch < 14:
-        print(f'epoch --> {epoch}')
-        generations = 20
-    # Пример вызова функции
-        params = {
-            'sequence': seq ,  # Бинарная послед.
-            'm': 8,  # Размер окна
-            'ind_size': 72,
-            'pop_size': 200,  # Размер популяции
-            'generations': generations,  # Кол.поколений
-            'cx_prob': cx_probs[epoch],  # Вероятность скрещивания
-            'mut_prob': mut_probs[epoch],  # Вероятность мутации
-            'alpha': 0.8,  # Разбиение на выборки
-           'mu': 80,
-           'lambda': 60,
-           'algo':  2, # идекс алгоритма,
-           'mate': mates[epoch] # индекс функции скрещиванияя
-        }
-        best_chromosome = searchBinQuadraticForm(params)
-        print_matrix(best_chromosome, params['m'])
-        epoch += 1 
 
 
 def test3():
@@ -484,7 +463,7 @@ def test5():
     seq = np.load(rel_bin_filename, allow_pickle=True).tolist()
     alpha = 0.8
     train_seq, test_seq = split_data(seq, alpha)
-    m = 1
+    m = 8
  
     error_train = approximation_error(train_seq, m, [1])
     error_test = approximation_error(test_seq, m, [1])
@@ -492,4 +471,4 @@ def test5():
 
    
 if __name__ == "__main__":
-    test6()
+    test2()
