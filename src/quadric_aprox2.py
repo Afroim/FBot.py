@@ -96,8 +96,7 @@ def bentTrio22(x):
     else:
          return 1 ^ quadricFunc22(x)
 
-
-        
+    
 
 def identity_transform(x, x_size, func, params):
     return func(x)
