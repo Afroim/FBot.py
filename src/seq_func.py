@@ -1,5 +1,3 @@
-#pylint:disable=W0612
-#pylint:disable=E1101
 import os
 #import platform
 #from pathlib import Path
@@ -27,22 +25,41 @@ def getMatrixes(fileName):
      matrix = jb.load(fileName)
      return matrix
      
-def identity(value):
-    return value[0]
-    
+###  Functions
 def randomizer(_):
     return random.randint(0, 1)     
      
+def identity(value):
+    return value[0]
+          
+def linearFunc(x):
+    return np.bitwise_xor.reduce(x)
+        
 def quadricFunc1(vector):
     return (np.dot(vector[:-2], vector[1:-1]) % 2) ^ vector[-1]
 
-
-def quadricFunc21(vector):
-    return np.dot(vector[:-1], vector[1:]) % 2
-    
-   
 def quadricFunc22(vector):
     return (np.dot(vector[:-1], vector[1:]) % 2) ^ vector[-2] ^ vector[-1]
+     
+def bentTrio1(x):
+     if 0 in x:
+         return quadricFunc1(x)
+     else:
+         return 1 ^ quadricFunc1(x)
+
+
+def bentTrio22(x):
+    if 0 in x:
+        return quadricFunc22(x)
+    else:
+        return 1 ^ quadricFunc22(x) 
+        
+        
+def bentTrio13(x):
+  if 0 in x[0:3]:
+      return quadricFunc1(x)
+  else:
+      return 1 ^ quadricFunc1(x)
     
     
 def bentFunc64(x):
@@ -57,30 +74,60 @@ def bentFunc64(x):
                 (x[3] & x[4]) ^ \
                 (x[3] & x[5] )
 
-# Глобальный словарь с размерами окон
-WINDOW_SIZES = [ 3, 5, 7]
-MAX_WIN_SIZE = max(WINDOW_SIZES)
-                 
-MATRIX_REP =  getMatrixes(get_file_path('original/quadricFunc1357_best_population.jb'))   
-FUNCS =  [ 
-    quadricFunc1, quadricFunc1, quadricFunc1
-]
-FUNC_NAME = 'CH_WIN'
+###  Transform Functions
+def identity_transform(x, x_size, func, params):
+    return func(x)
+    
 
-def affine_transform(x, x_size, func, trMatrix):
-    if x_size < 2:
-        return func(x)
+def linear_transform(x, x_size, func, params):
     n = x_size
-    A_flat = trMatrix
+    A_flat = params
     A = np.reshape(A_flat, (n, n)) 
     # Линейное преобразование Ax
     Ax = np.dot(A, x) % 2
     func_value = func(Ax) 
     return func_value
+   
+    
+def affine_transform(x, x_size,
+     bent_func, params):
+    n = x_size # Количество переменных
+    nn = n * n
+    # Извлекаем подматрицу A 
+    A_flat = params[:nn]
+    A = np.reshape(A_flat, (n, n))
+
+    # Извлекаем вектор b
+    b = params[nn:nn + n]
+
+    # Линейное преобразование Ax
+    Ax = np.dot(A, x) % 2
+
+    # Добавляем вектор смещения b
+    Ax_b =(Ax + b) % 2
+    # Вычисляем значение бинарной функции для преобразованных переменных
+    result = bent_func(Ax_b) 
+    return result
+    
+    
+# Глобальный словарь с размерами окон
+WINDOW_SIZES = [ 1, 1, 2, 3, 5, 7]
+MAX_WIN_SIZE = max(WINDOW_SIZES)                
+MATRIX_REP = [] 
+  
+FUNCS =  [
+    (randomizer, identity_transform),
+    (identity, identity_transform),
+    (identity, identity_transform),
+    (quadricFunc1, linear_transform),
+    (quadricFunc1, linear_transform),
+    (quadricFunc1, linear_transform)
+]
+FUNC_NAME = 'CH_WIN'
 
 # Функция ошибки
 def approximation_error(sequence, indexes):
-    
+        
     max_win_size = 7
     n = len(sequence)
     isize = len(indexes)
@@ -90,13 +137,19 @@ def approximation_error(sequence, indexes):
     end = max_win_size
     wsize = WINDOW_SIZES[sidx]   
     start = end - wsize
-    func = FUNCS[indexes[idx]]
+    funcs = FUNCS[indexes[idx]]
+    print()
+    func = funcs[0]
+    transform = funcs[1]
     tr_matrix = MATRIX_REP[sidx]
     mismatches = 0
     while end < n: 
         x_window = sequence[start:end]
-        #print(wsize, start, end,func.__name__)     
-        forecast = affine_transform(
+        print(wsize, start, end,
+                 func.__name__, 
+                 transform.__name__)     
+        print(f'Matrix:{len(tr_matrix)}')
+        forecast = transform(
             x_window, wsize,func, tr_matrix)      
         
         if forecast != sequence[end]:
@@ -105,7 +158,9 @@ def approximation_error(sequence, indexes):
         idx +=1 
         sidx = indexes[idx%isize]
         wsize = WINDOW_SIZES[sidx]
-        func = FUNCS[sidx]
+        funcs = FUNCS[sidx]
+        func = funcs[0]
+        transform = funcs[1]
         tr_matrix = MATRIX_REP[sidx]
         end +=1
         start = end - wsize
@@ -139,7 +194,7 @@ def errorFunc(individual, sequence):
         
 # Генерация хромосомы
 def create_individual(size):
-    m = len(MATRIX_REP) - 1
+    m = len(WINDOW_SIZES) - 1
     return [random.randint(0, m) for _ in range(size)]
     
  
@@ -323,13 +378,19 @@ def test1():
 
 
 def test2():
+     global MATRIX_REP
+     
+     MATRIX_REP = [[0], [0], [0]]
+     MATRIX_REP.extend(
+     getMatrixes(get_file_path('original/quadricFunc1357_best_population.jb')))
      alpha = 0.8
      rel_bin_filename = get_file_path('original/bin_min_relative_change.npy')
      seq = np.load(rel_bin_filename, allow_pickle=True).tolist()
      train_seq, test_seq = split_data(seq, alpha)
      #indexes = create_individual(100)
-     #indexes = [2,2,1,0,1,1,2,0]
-     indexes = [2,1,0,1,1,2,0,2]
+     indexes = [0,0,0,1,1,2,0,2,2,1,0,1,1,0,1,0,1,1,2,0,2,2,1,0,1,1,2,0,2,2,1,0,1,1,0,1,1,2,0]
+     #indexes = create_individual(20)
+     print(indexes)
      error = approximation_error(train_seq, indexes)
      err2 = approximation_error(test_seq, indexes)
      print(' Train error =', error)  
@@ -338,4 +399,4 @@ def test2():
      
      
 if __name__ == "__main__":
-    test1()
+    test2()
