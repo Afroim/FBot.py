@@ -1,9 +1,6 @@
-#pylint:disable=W0603
-#pylint:disable=W0613
-#pylint:disable=E1101
 import os
-import platform
-from pathlib import Path
+#import platform
+#from pathlib import Path
 import numpy as np
 from deap import base, creator, tools, algorithms
 import random
@@ -108,12 +105,6 @@ def bentNotTrio1(x):
 def notBentTrio1(x):
         return 1^ bentTrio1(x)
         
-def bentTrio22(x):
-     if 0 in x:
-         return quadricFunc22(x)
-     else:
-         return 1 ^ quadricFunc22(x)
-
 
 def identity_transform(x, x_size, func, params):
     return func(x)
