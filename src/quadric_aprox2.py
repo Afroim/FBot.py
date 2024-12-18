@@ -486,8 +486,8 @@ def test6():
     rel_bin_filename = get_file_path('original/bin_min_relative_change.npy')
     seq = np.load(rel_bin_filename, allow_pickle=True).tolist()
     epoch = 0
-    cx_probs = [0.5, 0.3]
-    mut_probs = [0.5, 0.7]
+    cx_probs = [0.5, 0.3, 0.1]
+    mut_probs = [0.5, 0.7, 0.9]
     mates = [0, 1, 2]
     selections = [0, 1]
 
