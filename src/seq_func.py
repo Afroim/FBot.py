@@ -31,6 +31,9 @@ def randomizer(_):
      
 def identity(value):
     return value[0]
+    
+def not_identity(value):
+    return 1^value[0]
           
 def linearFunc(x):
     return np.bitwise_xor.reduce(x)
@@ -53,15 +56,16 @@ def bentTrio22(x):
         return quadricFunc22(x)
     else:
         return 1 ^ quadricFunc22(x) 
-        
-        
+               
 def bentTrio13(x):
   if 0 in x[0:3]:
       return quadricFunc1(x)
   else:
       return 1 ^ quadricFunc1(x)
     
-    
+def notBentTrio13(x):
+    return 1 ^ bentTrio13(x)
+            
 def bentFunc64(x):
     return (x[0] & x[1] & x[2]) ^\
                 (x[1] & x[3] & x[4]) ^ \
@@ -119,11 +123,12 @@ FUNCS =  [
     (randomizer, identity_transform),
     (identity, identity_transform),
     (identity, identity_transform),
+    (linearFunc, identity_transform),
     (quadricFunc1, linear_transform),
     (quadricFunc1, linear_transform),
     (quadricFunc1, linear_transform)
 ]
-FUNC_NAME = 'CH_WIN'
+FUNC_NAME = 'ch_win'
 
 # Функция ошибки
 def approximation_error(sequence, indexes):
@@ -138,17 +143,16 @@ def approximation_error(sequence, indexes):
     wsize = WINDOW_SIZES[sidx]   
     start = end - wsize
     funcs = FUNCS[indexes[idx]]
-    print()
     func = funcs[0]
     transform = funcs[1]
     tr_matrix = MATRIX_REP[sidx]
     mismatches = 0
     while end < n: 
         x_window = sequence[start:end]
-        print(wsize, start, end,
-                 func.__name__, 
-                 transform.__name__)     
-        print(f'Matrix:{len(tr_matrix)}')
+        # print(wsize, start, end,
+        #          func.__name__, 
+        #          transform.__name__)     
+        # print(f'Matrix:{len(tr_matrix)}')
         forecast = transform(
             x_window, wsize,func, tr_matrix)      
         
@@ -165,7 +169,6 @@ def approximation_error(sequence, indexes):
         end +=1
         start = end - wsize
         
-    # print(mismatches, idx)
     return mismatches/idx
 
 
@@ -231,37 +234,44 @@ def searchBinQuadraticForm(params):
     algo = params['algo']
     mate  = params['mate']
     mutate = params['mutate']
+    selection  = params['selection']
     
     # Разделение на обучающую и тестовую выборки
     train_seq, test_seq = split_data(sequence, alpha)
     #train_seq = test_seq
     
     # Создание начальной популяции
+    if hasattr(creator, "FitnessMin"):
+        del creator.FitnessMin
     creator.create("FitnessMin", base.Fitness, weights=(-1.0,))
+
+    if hasattr(creator, "Individual"):
+        del creator.Individual
     creator.create("Individual", list, fitness=creator.FitnessMin)
 
-    # Создаем инструменты для генетического алгоритма
     toolbox = base.Toolbox()
     toolbox.register("individual", tools.initIterate, 
     creator.Individual,
     lambda: create_individual(xsize))
     toolbox.register("population", tools.initRepeat, list, toolbox.individual)
          
-    if 1 == mate:   
+    if 0 == mate:   
         toolbox.register("mate", tools.cxOnePoint)
-    elif 2 == mate:
+    elif 1 == mate:
         toolbox.register("mate", tools.cxUniform,
         indpb=0.5)
-    elif 3 == mate:
-        toolbox.register("mate", tools.    
-        cxPartialyMatched)
+    elif 2 == mate:
+        toolbox.register("mate", tools.cxTwoPoint)
     
-    if 1 == mutate:
+    if 0 == mutate:
         toolbox.register("mutate", tools.mutShuffleIndexes, indpb=BitProba)
-    elif 2 == mutate:
+    elif 1 == mutate:
          toolbox.register("mutate", tools.mutUniformInt, low=0,up=len(MATRIX_REP)-1,indpb=BitProba)
     
-    toolbox.register("select", tools.selBest)
+    if 0 == selection: 
+        toolbox.register("select", tools.selBest)
+    elif 1 == selection: 
+        toolbox.register("select", tools.selTournament, tournsize=3)
     
     # Эволюционная функция
     toolbox.register("evaluate", errorFunc, sequence=train_seq)
@@ -272,9 +282,9 @@ def searchBinQuadraticForm(params):
     stats.register("max", np.max)
     stats.register("avg", np.mean)
     
-    # Проверка наличия файла с последней популяцией
-    pop_filename = get_file_path('result/com_seq_population.npy')
+    pop_filename = get_file_path(f'result/{FUNC_NAME}_{xsize}_population.npy')
   
+    # Проверка наличия файла с последней популяцией
     if os.path.exists(pop_filename):
         population1 = np.load(pop_filename, allow_pickle=True).tolist()
         population1 = list({tuple(po) for po in population1})
@@ -294,29 +304,18 @@ def searchBinQuadraticForm(params):
     hof = tools.HallOfFame(10)
 
     #--- Алгоритмы эволюции
-    if 1 == algo:
-        population, logbook = algorithms.\
-            eaSimple(
-                population, toolbox,
-                cxpb=cx_prob,
-                mutpb=mut_prob,
-                ngen=generations,
-                stats=stats,
-                halloffame=hof,
-                verbose=True
-        )
-    elif 2 == algo:
-        population, logbook = algorithms.\
-            eaMuPlusLambda(
-             population, toolbox, 
-             mu = mu, 
-             lambda_ = lambda_,
-             cxpb=cx_prob, 
-             mutpb=mut_prob,    
-             ngen=generations,
-             stats=stats,
-             halloffame=hof,
-             verbose=True)
+    population, logbook = algorithms.\
+                eaMuPlusLambda(
+                 population, toolbox, 
+                 mu = mu, 
+                 lambda_ = lambda_,
+                 cxpb=cx_prob, 
+                 mutpb=mut_prob,    
+                 ngen=generations,
+                 stats=stats,
+                 halloffame=hof,
+                 verbose=True)
+            
     
     population.extend(hof)
     pop_set = list({tuple(po) for po in population})
@@ -351,12 +350,70 @@ def searchBinQuadraticForm(params):
     print(tabulate(data, headers="", tablefmt="plain", numalign="right"))
 
     return best_individual
-    
+
 
 def test1():
+     
+     global WINDOW_SIZES, FUNCS, MATRIX_REP 
+     
+     
+     WINDOW_SIZES = [1, 2, 3, 3, 4, 5, 5, 7, 7]
+
+     FUNCS =  [
+        (identity, identity_transform), # 1
+        (identity, identity_transform), # 2
+
+        (quadricFunc1, linear_transform), # 3
+        (bentTrio1, affine_transform),    # 3
+
+        (bentTrio22, affine_transform),    # 4
+
+        (quadricFunc1, linear_transform), # 5
+        (bentTrio1, affine_transform),    # 5
+
+        (quadricFunc1, linear_transform),  # 7
+        (bentTrio1, affine_transform)     # 7
+     ]
+
+     MATRIX_REP = [[0], [0]]
+     MATRIX_REP.extend(
+     getMatrixes(get_file_path('original/transform_007.jb')))
+     alpha = 0.8
+     rel_bin_filename = get_file_path('original/bin_min_relative_change.npy')
+     seq = np.load(rel_bin_filename, allow_pickle=True).tolist()
+     train_seq, test_seq = split_data(seq, alpha)
+     # indexes = create_individual(100)
+     # indexes = [0,0,0,1,1,2,0,2,2,1,0,1,1,0,1,0,1,1,2,0,2,2,1,0,1,1,2,0,2,2,1,0,1,1,0,1,1,2,0]
+     indexes = create_individual(5)
+     print(indexes)
+     error = approximation_error(train_seq, indexes)
+     err2 = approximation_error(test_seq, indexes)
+     print(' Train error =', error)  
+     print(' Test error =', err2)  
+     print(indexes)
+
+
+def learn1():
+    global WINDOW_SIZES, FUNCS, MATRIX_REP 
+    WINDOW_SIZES = [1, 2, 3, 3, 4, 5, 5, 7, 7]
+    FUNCS =  [
+        (identity, identity_transform), # 1
+        (identity, identity_transform), # 2
+        (quadricFunc1, linear_transform), # 3
+        (bentTrio1, affine_transform),    # 3
+        (bentTrio22, affine_transform),    # 4
+        (quadricFunc1, linear_transform), # 5
+        (bentTrio1, affine_transform),    # 5
+        (quadricFunc1, linear_transform),  # 7
+        (bentTrio1, affine_transform)     # 7
+    ]
+
+    MATRIX_REP = [[0], [0], [0]]
+    MATRIX_REP.extend(getMatrixes(get_file_path('original/transform_007.jb')))
+
     rel_bin_filename = get_file_path('original/bin_min_relative_change.npy')
     seq = np.load(rel_bin_filename, allow_pickle=True).tolist()
-    generations = 10
+    generations = 20
 # Пример вызова функции
     params = {
         'sequence': seq ,  # Бинарная послед.
@@ -373,30 +430,151 @@ def test1():
        'mate': 2, # индекс функции скрещиванияя
        'mutate': 2 # индекс функции мутации
     }
-    best_chromosome =             searchBinQuadraticForm(params)
+    best_chromosome = searchBinQuadraticForm(params)
     print(best_chromosome)   
 
 
-def test2():
-     global MATRIX_REP
-     
-     MATRIX_REP = [[0], [0], [0]]
-     MATRIX_REP.extend(
-     getMatrixes(get_file_path('original/quadricFunc1357_best_population.jb')))
-     alpha = 0.8
-     rel_bin_filename = get_file_path('original/bin_min_relative_change.npy')
-     seq = np.load(rel_bin_filename, allow_pickle=True).tolist()
-     train_seq, test_seq = split_data(seq, alpha)
-     #indexes = create_individual(100)
-     indexes = [0,0,0,1,1,2,0,2,2,1,0,1,1,0,1,0,1,1,2,0,2,2,1,0,1,1,2,0,2,2,1,0,1,1,0,1,1,2,0]
-     #indexes = create_individual(20)
-     print(indexes)
-     error = approximation_error(train_seq, indexes)
-     err2 = approximation_error(test_seq, indexes)
-     print(' Train error =', error)  
-     print(' Test error =', err2)  
-     print(indexes)
-     
-     
+def learn2(meta_param_random):
+    global WINDOW_SIZES, FUNCS, MATRIX_REP 
+    WINDOW_SIZES = [1, 2, 3, 3, 3, 4, 5, 5, 7, 7]
+    FUNCS =  [
+       # (randomizer, identity_transform), # 1
+        (identity, identity_transform), # 1
+        (identity, identity_transform), # 2
+        (linearFunc, identity_transform),# 3
+        (quadricFunc1, linear_transform), # 3
+        (bentTrio1, affine_transform),    # 3
+        (bentTrio22, affine_transform),    # 4
+        (quadricFunc1, linear_transform), # 5
+        (bentTrio1, affine_transform),    # 5
+        (quadricFunc1, linear_transform),  # 7
+        (bentTrio1, affine_transform)     # 7
+    ]
+
+    MATRIX_REP = [[0], [0], [0]]
+    MATRIX_REP.extend(getMatrixes(get_file_path('original/transform_007.jb')))
+
+    rel_bin_filename = get_file_path('original/bin_min_relative_change.npy')
+    seq = np.load(rel_bin_filename, allow_pickle=True).tolist()
+
+    epoch = 0
+    cx_probs = [0.5, 0.3, 0.1]
+    mut_probs = [0.5, 0.7, 0.9]
+    mates = [0, 1, 2]
+    mutates = [0, 1]
+    selections = [0, 1]
+
+    while epoch < 20:
+
+        print(f'epoch --> {epoch}')
+
+        if meta_param_random:
+            proba_index = random.randint(0,2)
+            cx_prob = cx_probs[proba_index]
+            mut_prob = 1 - cx_prob
+            mate = mates[random.randint(0,2)] 
+            mutate = mutates[random.randint(0,1)]
+            selection = selections[random.randint(0,1)]
+        else:
+            cx_prob = 0.1
+            mut_prob = 0.9
+            mate = 1
+            mutate = 1
+            selection = 0
+
+        print(f'mate={mate}~{cx_prob}, mutate={mutate}~{mut_prob}, selection={selection}')
+
+        params = {
+            'sequence': seq ,  # Бинарная послед.
+            'generations': 10,  # Кол.поколений
+            'win_size': 0,  # Размер окна
+            'xsize': 13, # размер хромосомы
+            'pop_size': 2+00,  # Размер популяции
+            'alpha': 0.8,  # Разбиение на выборки
+            'mu': 120,
+            'lambda': 70,
+            'cx_prob': cx_prob,  # Вероятность скрещивания
+            'mut_prob': mut_prob,  # Вероятность мутации    
+            'algo':  2, # идекс алгоритма,
+            'mate': mate, # индекс функции скрещиванияя
+            'mutate': mutate, # индекс функции мутации
+            'selection': selection
+        }
+        best_chromosome = searchBinQuadraticForm(params)
+        print(best_chromosome)    
+        epoch += 1
+        
+        
+def learn3(meta_param_random):
+    global FUNC_NAME
+    global WINDOW_SIZES, FUNCS, MATRIX_REP
+    
+    FUNC_NAME = 'not_func512'
+    WINDOW_SIZES = [5,3,1]
+    FUNCS =  [
+       # (randomizer, identity_transform), # 1
+        (bentTrio13, affine_transform),    # 5
+        #(notBentTrio13, affine_transform),    # 5
+        (linearFunc, identity_transform), #1
+        (not_identity, identity_transform) ,#1
+        #(identity, identity_transform) #2
+    ]
+
+    MATRIX_REP = [
+    [0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+    [0],[0]]
+   # print(MATRIX_REP)
+    
+    rel_bin_filename = get_file_path('original/bin_min_relative_change.npy')
+    seq = np.load(rel_bin_filename, allow_pickle=True).tolist()
+
+    epoch = 0
+    cx_probs = [0.5, 0.3, 0.1]
+    mut_probs = [0.5, 0.7, 0.9]
+    mates = [0, 1, 2]
+    mutates = [0, 1]
+    selections = [0, 1]
+
+    while epoch < 20:
+
+        print(f'epoch --> {epoch}')
+
+        if meta_param_random:
+            proba_index = random.randint(0,2)
+            cx_prob = cx_probs[proba_index]
+            mut_prob = 1 - cx_prob
+            mate = mates[random.randint(0,2)] 
+            mutate = mutates[random.randint(0,1)]
+            selection = selections[random.randint(0,1)]
+        else:
+            cx_prob = 0.5
+            mut_prob = 0.5
+            mate = 1
+            mutate = 1
+            selection = 0
+
+        print(f'mate={mate}~{cx_prob}, mutate={mutate}~{mut_prob}, selection={selection}')
+
+        params = {
+            'sequence': seq ,  # Бинарная послед.
+            'generations': 10,  # Кол.поколений
+            'win_size': 0,  # Размер окна
+            'xsize': 25, # размер хромосомы
+            'pop_size': 200,  # Размер популяции
+            'alpha': 0.8,  # Разбиение на выборки
+            'mu': 120,
+            'lambda': 70,
+            'cx_prob': cx_prob,  # Вероятность скрещивания
+            'mut_prob': mut_prob,  # Вероятность мутации    
+            'algo':  2, # идекс алгоритма,
+            'mate': mate, # индекс функции скрещиванияя
+            'mutate': mutate, # индекс функции мутации
+            'selection': selection
+        }
+        best_chromosome = searchBinQuadraticForm(params)
+        print(best_chromosome)    
+        epoch += 1
+
+      
 if __name__ == "__main__":
-    test2()
+    learn3(meta_param_random=True)

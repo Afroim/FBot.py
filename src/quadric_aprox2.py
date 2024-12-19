@@ -94,6 +94,13 @@ def bentTrio13(x):
   else:
       return 1 ^ quadricFunc1(x)
       
+      
+def bentTrio31(x):
+  if 0 in x[-3:]:
+      return quadricFunc1(x)
+  else:
+      return 1 ^ quadricFunc1(x)
+      
   
 def bentNotTrio1(x):
      if 1 in x:
@@ -176,7 +183,7 @@ def affine_transform_2(x, x_size,
     
 # Global Setting
 FUNCTOR =  (
-affine_transform_1, bentTrio22
+affine_transform_1, bentTrio31
 #affine_transform_adv, quadricFunc21
 )
 FUNC_NAME = FUNCTOR[1].__name__
@@ -477,11 +484,10 @@ def test5():
     print('error >>', error_train, error_test )
 
 
-def test6():
+def learn():
     global FUNCTOR, FUNC_NAME
-    FUNCTOR = (affine_transform_1, bentTrio22)
+    FUNCTOR = (affine_transform_1, bentTrio31)
     FUNC_NAME = FUNCTOR[1].__name__
-
 
     rel_bin_filename = get_file_path('original/bin_min_relative_change.npy')
     seq = np.load(rel_bin_filename, allow_pickle=True).tolist()
@@ -492,7 +498,7 @@ def test6():
     selections = [0, 1]
 
     while epoch < 14:
-        generations = 7
+        generations = 10
         pop_size = 200
         
         proba_index = random.randint(0,1)
@@ -505,8 +511,8 @@ def test6():
 
         params = {
             'sequence': seq,  # Бинарная послед.
-            'm': 4,  # Размер окна
-            'ind_size': 20,
+            'm': 5,  # Размер окна
+            'ind_size': 30,
             'pop_size': pop_size,  # Размер популяции
             'generations': generations,  # Кол.поколений
             'cx_prob': cx_prob,  # Вероятность скрещивания
@@ -524,5 +530,5 @@ def test6():
 
    
 if __name__ == "__main__":
-    test6()
+    learn()
 
