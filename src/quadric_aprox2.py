@@ -1,3 +1,4 @@
+#pylint:disable=W0613
 import os
 #import platform
 #from pathlib import Path
@@ -94,6 +95,13 @@ def bentTrio13(x):
   else:
       return 1 ^ quadricFunc1(x)
       
+      
+def bentTrio31(x):
+  if 0 in x[-3:]:
+      return quadricFunc1(x)
+  else:
+      return 1 ^ quadricFunc1(x)
+      
   
 def bentNotTrio1(x):
      if 1 in x:
@@ -104,6 +112,22 @@ def bentNotTrio1(x):
     
 def notBentTrio1(x):
         return 1^ bentTrio1(x)
+        
+def partTrioBent1(startIndex, firstPolyDegree):
+     def partTrio(x):
+         y = x[startIndex:]
+         if 0 in y[-firstPolyDegree:]:
+              return quadricFunc1(y)
+         else:
+              return 1 ^ quadricFunc1(y)  
+              
+     return partTrio
+     
+def partTrioBent2(startIndex):
+     def partTrio(x):
+         return quadricFunc1(x[startIndex:])         
+     return partTrio
+        
         
 
 def identity_transform(x, x_size, func, params):
@@ -176,7 +200,7 @@ def affine_transform_2(x, x_size,
     
 # Global Setting
 FUNCTOR =  (
-affine_transform_1, bentTrio22
+affine_transform_1, bentTrio31
 #affine_transform_adv, quadricFunc21
 )
 FUNC_NAME = FUNCTOR[1].__name__
@@ -477,25 +501,26 @@ def test5():
     print('error >>', error_train, error_test )
 
 
-def test6():
+def learn():
     global FUNCTOR, FUNC_NAME
-    FUNCTOR = (affine_transform_1, bentTrio22)
+    
+    partTrio5 = partTrioBent2(1)
+    FUNCTOR = (affine_transform_1, partTrio5)
     FUNC_NAME = FUNCTOR[1].__name__
-
 
     rel_bin_filename = get_file_path('original/bin_min_relative_change.npy')
     seq = np.load(rel_bin_filename, allow_pickle=True).tolist()
     epoch = 0
     cx_probs = [0.5, 0.3, 0.1]
-    mut_probs = [0.5, 0.7, 0.9]
+    #mut_probs = [0.5, 0.7, 0.9]
     mates = [0, 1, 2]
     selections = [0, 1]
 
     while epoch < 14:
-        generations = 7
-        pop_size = 200
+        generations = 20
+        #pop_size = 200
         
-        proba_index = random.randint(0,1)
+        proba_index = random.randint(0,2)
         cx_prob = cx_probs[proba_index]
         mut_prob = 1 - cx_prob
         mate = mates[random.randint(0,2)] 
@@ -505,15 +530,15 @@ def test6():
 
         params = {
             'sequence': seq,  # Бинарная послед.
-            'm': 4,  # Размер окна
-            'ind_size': 20,
-            'pop_size': pop_size,  # Размер популяции
+            'm': 6,  # Размер окна
+            'ind_size': 45,
+            'pop_size': 256,  # Размер популяции
             'generations': generations,  # Кол.поколений
             'cx_prob': cx_prob,  # Вероятность скрещивания
             'mut_prob': mut_prob,  # Вероятность мутации
             'alpha': 0.8,  # Разбиение на выборки
-            'mu': 80,
-            'lambda': 60,
+            'mu': 224,
+            'lambda': 200,
             'algo': 2, # идекс алгоритма,
             'mate': mate, # индекс функции скрещиванияя
             'selection': selection
@@ -524,5 +549,5 @@ def test6():
 
    
 if __name__ == "__main__":
-    test6()
+    learn()
 
