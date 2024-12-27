@@ -46,24 +46,24 @@ def quadricFunc22(vector):
     return (np.dot(vector[:-1], vector[1:]) % 2) ^ vector[-2] ^ vector[-1]
     
     
-def bentFunc72(x):
+def bentFunc62(x):
     return (x[0] & x[1] & x[2] ) ^\
                (x[0] & x[3] ) ^ \
                (x[1] & x[4] ) ^ \
-                (x[2] & x[5]) ^x[6]
+                (x[2] & x[5])
                 
                 
-def bentFunc73(x):
+def bentFunc63(x):
      return (x[0] & x[1] & x[2]) ^ \
      (x[1] & x[3] & x[4] ) ^\
      (x[0] & x[1]) ^\
      (x[0] & x[3]) ^\
      (x[1] & x[5]) ^\
      (x[2] & x[4]) ^\
-     (x[3] & x[4]) ^x[6]
+     (x[3] & x[4])
      
                
-def bentFunc74(x):
+def bentFunc64(x):
     return (x[0] & x[1] & x[2]) ^\
                 (x[1] & x[3] & x[4]) ^ \
                 (x[2] & x[3] & x[5]) ^ \
@@ -73,7 +73,7 @@ def bentFunc74(x):
                 (x[2] & x[4]) ^\
                 (x[2] & x[5]) ^ \
                 (x[3] & x[4]) ^ \
-                (x[3] & x[5] ) ^x[6]
+                (x[3] & x[5] ) 
 
      
 def bentTrio1(x):
@@ -97,7 +97,16 @@ def bentTrio13(x):
       return 1 ^ quadricFunc1(x)
       
       
-def bentTrio31(x):
+def bentTrio130(x):
+  if 1 not in x:
+      return 1
+  elif 0 in x[0:3]:
+      return quadricFunc1(x)
+  else:
+      return 1 ^ quadricFunc1(x)
+      
+      
+def bentTrio31(x):  
   if 0 in x[-3:]:
       return quadricFunc1(x)
   else:
@@ -167,7 +176,7 @@ def affine_transform(x, y_size,
     result = bent_func(Ax_b) 
 
     return result
-     
+  
         
 # Global Setting
 FUNCTOR =  (
@@ -180,11 +189,11 @@ def approximation_error(sequence, m, part,q_values):
     n = len(sequence)
     mismatches = 0 
     steps = n - m
-    affineTransform = FUNCTOR[0]
+    transform = FUNCTOR[0]
     func = FUNCTOR[1]
     for i in range(steps):
         x_window = sequence[i:i + m]
-        approx_value = affineTransform(x_window, part, func, q_values)
+        approx_value = transform(x_window, part, func, q_values)
         if approx_value != sequence[i + m]:
             mismatches += 1
   
@@ -417,11 +426,14 @@ def print_result():
 def learn():
     global FUNCTOR, FUNC_NAME
     
-    FUNCTOR = (affine_transform, bentTrio13)
-    FUNC_NAME ='AFF_' + FUNCTOR[0].__name__
+    FUNCTOR = (affine_transform, bentTrio130)
+    #FUNCTOR = (affine_transform, bentFunc64) 
+    FUNC_NAME ='AFF_' + FUNCTOR[1].__name__
 
     rel_bin_filename = get_file_path('original/bin_min_relative_change.npy')
-    seq = np.load(rel_bin_filename, allow_pickle=True).tolist()
+    seq_original = np.load(rel_bin_filename, allow_pickle=True).tolist()
+    #seq = seq_original[-1260:]
+    seq  = seq_original
     epoch = 0
     cx_probs = [0.5, 0.3, 0.1]
     #mut_probs = [0.5, 0.7, 0.9]
@@ -442,9 +454,9 @@ def learn():
 
         params = {
             'sequence': seq,  # Бинарная послед.
-            'm': 8,  # Размер окна
-            'part': 5,
-            'ind_size': 45,
+            'm': 5,  # Размер окна
+            'part': 7,
+            'ind_size': 42,
             'pop_size': 256,  # Размер популяции
             'generations': generations,  # Кол.поколений
             'cx_prob': cx_prob,  # Вероятность скрещивания
