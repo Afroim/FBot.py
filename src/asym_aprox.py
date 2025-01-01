@@ -177,6 +177,17 @@ def affine_transform(x, y_size,
 
     return result
   
+  
+def adaf_transform(x, y_size, func, params):
+    x1 = x[:-1]
+    x2 = x[1:]
+    lenght = int(len(params)/2)
+    params1 = params[:lenght]
+    params2 = params[lenght:]
+    r1 = affine_transform(x1, y_size, func, params1)
+    r2 = affine_transform(x2, y_size, func, params2)
+    return r1^r2
+    
         
 # Global Setting
 FUNCTOR =  (
@@ -197,7 +208,8 @@ def approximation_error(sequence, m, part,q_values):
         if approx_value != sequence[i + m]:
             mismatches += 1
   
-    return ( mismatches / steps )
+    #return (np.abs(0.5 - mismatches / steps ))
+    return mismatches / steps
 
 
 # Эвалюционная Функция
@@ -410,25 +422,27 @@ def test3():
                     
 def print_result():
     global FUNCTOR 
-    FUNCTOR = (identity_transform, identity)
+    FUNCTOR = (affine_transform, bentFunc64)
     rel_bin_filename = get_file_path('original/bin_min_relative_change.npy')
     seq = np.load(rel_bin_filename, allow_pickle=True).tolist()
+    q_values = (0, 0, 0, 0, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 0, 0, 1, 1, 1, 1, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+    print('q_vlues=', len(q_values))
     alpha = 0.8
     train_seq, test_seq = split_data(seq, alpha)
-    m = 8
-    n = 5
-    error_train = approximation_error(train_seq,
-    m,n, FUNCTOR[1])
-    error_test = approximation_error(test_seq, m, FUNCTOR[1])
+    m = 5
+    n = 6
+    error_train = approximation_error(train_seq,m,n,q_values)
+    print('error >>', error_train )
+    error_test = approximation_error(test_seq, m, n,q_values)
     print('error >>', error_train, error_test )
 
 
 def learn():
     global FUNCTOR, FUNC_NAME
     
-    FUNCTOR = (affine_transform, bentTrio130)
+    FUNCTOR = (adaf_transform, bentTrio13)
     #FUNCTOR = (affine_transform, bentFunc64) 
-    FUNC_NAME ='AFF_' + FUNCTOR[1].__name__
+    FUNC_NAME ='ADAF_' + FUNCTOR[1].__name__
 
     rel_bin_filename = get_file_path('original/bin_min_relative_change.npy')
     seq_original = np.load(rel_bin_filename, allow_pickle=True).tolist()
@@ -454,9 +468,9 @@ def learn():
 
         params = {
             'sequence': seq,  # Бинарная послед.
-            'm': 5,  # Размер окна
-            'part': 7,
-            'ind_size': 42,
+            'm': 6,  # Размер окна
+            'part': 5,
+            'ind_size': 60,
             'pop_size': 256,  # Размер популяции
             'generations': generations,  # Кол.поколений
             'cx_prob': cx_prob,  # Вероятность скрещивания
@@ -476,5 +490,6 @@ def learn():
 
    
 if __name__ == "__main__":
+    #print_result()
     learn()
 
