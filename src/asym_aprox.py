@@ -188,6 +188,28 @@ def adaf_transform(x, y_size, func, params):
     r2 = affine_transform(x2, y_size, func, params2)
     return r1^r2
     
+    
+def adaf_transform2(x, y_size, func, params):
+    x1 = x[:-2]
+    x2 = x[1:-1]
+    x3 = x[2:]
+    #len1= int(len(params)/3)
+    len1 = 30
+    len2 = len1  + len1
+    len3  = len2 + len1
+    params1 = params[:len1]
+    params2 = params[len1:len2]
+    params3 = params[len2:len3]
+    params4 = params[len3:]
+    r1 = affine_transform(x1, len(x1), func, params1)
+    r2 = affine_transform(x2, len(x2),func , params2)
+    r3 = affine_transform(x3, len(x3),func , params3)
+    
+    w = [r1, r2, r3]
+    res  = affine_transform(w, y_size,quadricFunc1, params4)
+    
+    return res
+    
         
 # Global Setting
 FUNCTOR =  (
@@ -440,7 +462,7 @@ def print_result():
 def learn():
     global FUNCTOR, FUNC_NAME
     
-    FUNCTOR = (adaf_transform, bentTrio13)
+    FUNCTOR = (adaf_transform2, bentTrio13)
     #FUNCTOR = (affine_transform, bentFunc64) 
     FUNC_NAME ='ADAF_' + FUNCTOR[1].__name__
 
@@ -468,9 +490,9 @@ def learn():
 
         params = {
             'sequence': seq,  # Бинарная послед.
-            'm': 6,  # Размер окна
-            'part': 5,
-            'ind_size': 60,
+            'm': 7,  # Размер окна
+            'part': 3,
+            'ind_size': 102,
             'pop_size': 256,  # Размер популяции
             'generations': generations,  # Кол.поколений
             'cx_prob': cx_prob,  # Вероятность скрещивания
