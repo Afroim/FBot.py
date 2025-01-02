@@ -119,6 +119,17 @@ def affine_transform(x, y_size, func, params):
 
     return result
     
+   
+def adaf_transform(x, y_size, func, params):
+    x1 = x[:-1]
+    x2 = x[1:]
+    ln = len(params)/2
+    params1 = params[:ln]
+    params2 = params[ln:]
+    r1 = affine_transform(x1, y_size, func, params1)
+    r2 = affine_transform(x2, y_size, func, params2)
+    return r1^r2
+    
     
 # Глобальный словарь с размерами окон
 WINDOW_SIZES = [ 5, 5 ]
