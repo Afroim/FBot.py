@@ -23,11 +23,27 @@ def get_file_path(fileName,
     return full_path
     
 def identity(x):
-    return x[0]
+    return x[-1]
     
     
 def identity2(x):
-    return 1^x[0]
+    return 1^x[-1]
+    
+    
+def identity_adv1(x):
+    if 1 not in x:
+        return 1
+    elif 0 not in x:
+        return 1
+    else:
+        return x[-1]
+        
+        
+def identity_adv(x):
+    if 0 in x[0:3]:
+        return x[-1]
+    else:
+        return quadricFunc1(x[1:])
     
     
 def linearFunc(x):
@@ -457,6 +473,21 @@ def print_result():
     print('error >>', error_train )
     error_test = approximation_error(test_seq, m, n,q_values)
     print('error >>', error_train, error_test )
+    
+def run_test2():
+    global FUNCTOR 
+    FUNCTOR = (identity_transform, identity_adv)
+    rel_bin_filename = get_file_path('original/bin_min_relative_change.npy')
+    seq = np.load(rel_bin_filename, allow_pickle=True).tolist()
+    q_values = []
+    alpha = 0.8
+    train_seq, test_seq = split_data(seq, alpha)
+    m = 6
+    n = 5
+    error_train = approximation_error(train_seq,m,n,q_values)
+    print('error >>', error_train )
+    error_test = approximation_error(test_seq, m, n,q_values)
+    print('error >>', error_train, error_test )
 
 
 def learn():
@@ -512,6 +543,7 @@ def learn():
 
    
 if __name__ == "__main__":
-    #print_result()
-    learn()
+    # print_result()
+    # learn()
+    run_test2()
 

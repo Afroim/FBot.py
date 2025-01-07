@@ -138,7 +138,22 @@ def partTrioBent2(startIndex):
          return quadricFunc1(x[startIndex:])         
      return partTrio
         
-        
+def decimal_to_binary(value, length): 
+    sign = int(value < 0) 
+    value = abs(value)
+
+    # Генерация двоичных разрядов
+    binary_array = np.zeros(length + sign, dtype=int)
+    for i in range(length):
+        value *= 2
+        binary_array[-(i + 1 + sign)] = int(value >= 1)  # Заполнение со старших индексов
+        value %= 1
+
+    # Добавляем бит знака в конец массива
+    if sign == 1:
+        binary_array[-1] = 1
+
+    return binary_array      
 
 def identity_transform(x, x_size, func, params):
     return func(x)
@@ -169,6 +184,22 @@ def p_odic_transform(params, x, coefs ):
     result = func(bresult)
     return result
   
+  
+def float_transform(params, x, coefs ):   
+    rsize  = params["rsize"]
+    base = params["base"]
+    mod = params["mod"]
+    func = params["func"]
+    decimal_number = np.dot(x[::-1], base ** np.arange(len(x)))
+    
+    # Вычисление значения полинома
+    powers = np.arange(len(coefs))
+    polynomial_value = np.sum(np.array(coefs) * (decimal_number ** powers)) % mod
+    
+    by = decimal_to_binary(polynomial_value, rsize)
+
+    result = func[len(by)%2](by)
+    return result
         
 # Global Setting
 FUNCTOR =  (
@@ -208,9 +239,12 @@ def errorFunc(individual, params):
 def create_individual1(size):
     return [random.randint(0, 1) for _ in range(size)]
     
-def create_individual(size, maxInt):
+def create_individual2(size, maxInt):
     return [random.randint(0, maxInt) 
                 for _ in range(size)]
+                
+def create_individual(size):
+    return np.random.uniform(-1,1,size)
     
     
 # Разделение данных на обучающую и тестовую выборки
@@ -268,7 +302,7 @@ def searchBinQuadraticForm(params):
     toolbox = base.Toolbox()
     toolbox.register("individual", 
         tools.initIterate, creator.Individual,         
-        lambda:create_individual(size=ind_size,maxInt=mod - 1))
+        lambda:create_individual(size=ind_size))
     toolbox.register("population", tools.initRepeat, list, toolbox.individual)
          
     if 0 == mate:   
@@ -280,7 +314,8 @@ def searchBinQuadraticForm(params):
          toolbox.register("mate", tools.cxOnePoint)
     # elif 4 == mate:
     #     toolbox.register("mate", tools.cxPartialyMatched)
-    toolbox.register("mutate", tools.mutUniformInt, low=0,up=mod - 1,indpb=BitProba)
+    #toolbox.register("mutate", tools.mutUniformInt, low=0,up=mod - 1,indpb=BitProba)
+    toolbox.register("mutate", tools.mutPolynomialBounded, low=-1, up=1, eta=20,indpb=BitProba)
 
     if 0 == selection: 
         toolbox.register("select", tools.selBest)
@@ -425,9 +460,8 @@ def print_result():
 def learn():
     global FUNCTOR, FUNC_NAME
     
-    FUNCTOR = (p_odic_transform, bentTrio13)
-    #FUNCTOR = (affine_transform, bentFunc64) 
-    FUNC_NAME ='AFF_' + FUNCTOR[1].__name__
+    FUNCTOR = (float_transform, (bentFunc64,bentTrio13)) 
+    FUNC_NAME ='float_' + FUNCTOR[1][0].__name__
 
     rel_bin_filename = get_file_path('original/bin_min_relative_change.npy')
     seq_original = np.load(rel_bin_filename, allow_pickle=True).tolist()
@@ -454,18 +488,64 @@ def learn():
         params = {
             'sequence': seq,  # Бинарная послед.
             'm': 5,  # Размер окна
-            'base': 2,
-            'mod': 32,
+            'base': 0.5,
+            'mod': 1,
             'rsize': 5,
             'ind_size': 11,
-            'pop_size': 256,  # Размер популяции
+            'pop_size': 300,  # Размер популяции
             'generations': generations,  # Кол.поколений
             'cx_prob': cx_prob,  # Вероятность скрещивания
             'mut_prob': mut_prob,  # Вероятность мутации
             'alpha': 0.8,  # Разбиение на выборки
-            'mu': 128,
-            'lambda': 64,
+            'mu': 250,
+            'lambda': 150,
             'algo': 2, # идекс алгоритма,
+            'mate': mate, # индекс функции скрещиванияя
+            'selection': selection
+        }
+        best_chromosome = searchBinQuadraticForm(params)
+        
+        print(f"Best individual: {best_chromosome}")
+        del(best_chromosome)
+        epoch += 1
+        
+        
+def learn2():
+    global FUNCTOR, FUNC_NAME
+    
+    FUNCTOR = (float_transform, (bentFunc64,bentTrio13)) 
+    FUNC_NAME ='float_' + FUNCTOR[1][0].__name__
+
+    rel_bin_filename = get_file_path('original/bin_min_relative_change.npy')
+    seq_original = np.load(rel_bin_filename, allow_pickle=True).tolist()
+    #seq = seq_original[-1260:]
+    seq  = seq_original
+    epoch = 0
+
+    while epoch <10:
+        generations = 20
+        cx_prob = 0.5
+        mut_prob = 0.5
+        mate = 0
+        selection = 1
+        print(f'epoch --> {epoch}')
+        print(f'mate={mate}~({cx_prob},{mut_prob}), selection={selection}')
+        
+        params = {
+            'sequence': seq,  # Бинарная послед.
+            'm': 5,  # Размер окна
+            'base': 0.5,
+            'mod': 1,
+            'rsize': 5,
+            'ind_size': 11,
+            'pop_size': 300,  # Размер популяции
+            'generations': generations,  # Кол.поколений
+            'cx_prob': cx_prob,  # Вероятность скрещивания
+            'mut_prob': mut_prob,  # Вероятность мутации
+            'alpha': 0.8,  # Разбиение на выборки
+            'mu': 250,
+            'lambda': 150,
+            'algo': 1, # идекс алгоритма,
             'mate': mate, # индекс функции скрещиванияя
             'selection': selection
         }
@@ -478,5 +558,5 @@ def learn():
    
 if __name__ == "__main__":
     #print_result()
-    learn()
+    learn2()
 
