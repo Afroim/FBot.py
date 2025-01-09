@@ -23,11 +23,11 @@ def get_file_path(fileName,
     return full_path
     
 def identity(x):
-    return x[0]
+    return x[-1]
     
     
-def identity2(x):
-    return 1^x[0]
+def inv_identity(x):
+    return 1^x[-1]
     
     
 def linearFunc(x):
@@ -133,6 +133,9 @@ def partTrioBent1(startIndex, firstPolyDegree):
               
      return partTrio
      
+def identityTrio(x):
+    return (x[0] & x[1] & x[2]) ^ x[-1]
+     
 def partTrioBent2(startIndex):
      def partTrio(x):
          return quadricFunc1(x[startIndex:])         
@@ -190,6 +193,24 @@ def float_transform(params, x, coefs ):
     base = params["base"]
     mod = params["mod"]
     func = params["func"]
+   
+    decimal_number = np.dot(x[::-1], base ** np.arange(len(x)))
+    
+    # Вычисление значения полинома
+    powers = np.arange(len(coefs))
+    polynomial_value = np.sum(np.array(coefs) * (decimal_number ** powers)) % mod
+    
+    by = decimal_to_binary(polynomial_value, rsize)
+
+    result = func[len(by)%2](by)
+    return result
+  
+  
+def float_sign_transform(params, x, coefs ):   
+    rsize  = params["rsize"]
+    base = params["base"]
+    mod = params["mod"]
+    func = params["func"]
     x1 = x[1:]
     sign = x[0]
     decimal_number = np.dot(x1[::-1], base ** np.arange(len(x1)))
@@ -202,6 +223,29 @@ def float_transform(params, x, coefs ):
     by = decimal_to_binary(polynomial_value, rsize)
 
     result = func[len(by)%2](by)
+    return result
+    
+    
+def float_identity_transform(params, x, coefs ):   
+    #rsize  = params["rsize"]
+    base = params["base"]
+    mod = params["mod"]
+    #func = params["func"]
+    x1 = x[1:]
+    sign = x[0]
+    decimal_number = np.dot(x1[::-1], base ** np.arange(len(x1)))
+    if 1 == sign:
+        decimal_number = -decimal_number
+    # Вычисление значения полинома
+    powers = np.arange(len(coefs))
+    polynomial_value = np.sum(np.array(coefs) * (decimal_number ** powers)) % mod
+    
+    if polynomial_value < 0:
+        result = 1
+    else:
+        result = int((polynomial_value * 2) >= 1) 
+
+    
     return result
         
 # Global Setting
@@ -517,7 +561,7 @@ def learn2():
     global FUNCTOR, FUNC_NAME
     
     # FUNCTOR = (float_transform, (bentFunc64,bentTrio13)) 
-    FUNCTOR = (float_transform, (quadricFunc22,quadricFunc1)) 
+    FUNCTOR = (float_identity_transform, (identity,identity)) 
     FUNC_NAME ='float_' + FUNCTOR[1][0].__name__
 
     rel_bin_filename = get_file_path('original/bin_min_relative_change.npy')
@@ -540,7 +584,7 @@ def learn2():
             'm': 6,  # Размер окна
             'base': 0.5,
             'mod': 1,
-            'rsize': 5,
+            'rsize': 1,
             'ind_size': 11,
             'pop_size': 300,  # Размер популяции
             'generations': generations,  # Кол.поколений
