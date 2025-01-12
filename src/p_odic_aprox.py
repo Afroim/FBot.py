@@ -9,6 +9,8 @@ import random
 import csv
 from tabulate import tabulate
 import pandas as pd
+import math
+
 
 def get_file_path(fileName, 
     sub_path = "data/XAUUSD/D1/"):
@@ -157,6 +159,9 @@ def decimal_to_binary(value, length):
         binary_array[-1] = 1
 
     return binary_array      
+    
+def sigmoid(x):
+    return 1 / (1 + np.exp(-x))
 
 def identity_transform(x, x_size, func, params):
     return func(x)
@@ -229,24 +234,85 @@ def float_sign_transform(params, x, coefs ):
 def float_identity_transform(params, x, coefs ):   
     #rsize  = params["rsize"]
     base = params["base"]
-    mod = params["mod"]
+    #mod = params["mod"]
     #func = params["func"]
-    x1 = x[1:]
-    sign = x[0]
+    x1 = x
+    sign = x[-1]
     decimal_number = np.dot(x1[::-1], base ** np.arange(len(x1)))
     if 1 == sign:
         decimal_number = -decimal_number
     # Вычисление значения полинома
     powers = np.arange(len(coefs))
-    polynomial_value = np.sum(np.array(coefs) * (decimal_number ** powers)) % mod
+    polynomial_value = np.sum(np.array(coefs) * (decimal_number ** powers))
     
-    if polynomial_value < 0:
-        result = 1
-    else:
-        result = int((polynomial_value * 2) >= 1) 
-
-    
+    #result = int(((polynomial_value %1)* 2) >= 1)
+    result =   int(polynomial_value > 0)
     return result
+    
+    
+def double_transform(params, x, coefs ):   
+    #rsize  = params["rsize"]
+    base = params["base"]
+    #mod = params["mod"]
+    #func = params["func"]
+    x1 = x[0:-1]
+    x2 = x[1:]
+    sign1 = x1[-1]
+    sign2 = x2[-1]
+    decimal_number1 = np.dot(x1[::-1], base ** np.arange(len(x1)))
+    decimal_number2 = np.dot(x2[::-1], base ** np.arange(len(x2)))
+    if 1 == sign1:
+        decimal_number1 = -decimal_number1
+    if 1 == sign2:
+        decimal_number2 = -decimal_number2
+    # Вычисление значения полинома
+    size = len(coefs)//2
+    powers = np.arange(size)
+    p_value1 = np.sum(np.array(coefs[:size]) * (decimal_number1 ** powers))
+    
+    p_value2 = np.sum(np.array(coefs[size:]) * (decimal_number2 ** powers))
+    
+    p_value = sigmoid(p_value1+ p_value2) 
+    result = int((p_value* 2) >= 1)
+    return result
+    
+    
+def trigonometric_series(params, x):
+     # Нулевой коэффициент
+    a0 = params[0]
+    n = len(params)
+    midpoint = (n - 1) // 2
+    # Коэффициенты для cos(nx)
+    a_coeffs = np.array(params[1:midpoint + 1])
+    # Коэффициенты для sin(nx)
+    b_coeffs = np.array(params[midpoint + 1:])  
+    # Создаём массив индексов для n
+    n_values = np.arange(1, len(a_coeffs) + 1)
+    # Вычисление суммы ряда
+    cos_terms = a_coeffs * np.cos(n_values * x)
+    sin_terms = b_coeffs * np.sin(n_values * x)
+    series_value = (a0 + np.sum(cos_terms + sin_terms))
+
+    return series_value
+        
+    
+def fourier_transform(params, x, coefs ):   
+    #rsize  = params["rsize"]
+    base = params["base"]
+    #mod = params["mod"]
+    #func = params["func"]
+    x1 = x
+    #sign = x[-1]
+    sign  = 0
+    decimal_number = np.dot(x1[::-1], base ** np.arange(len(x1)))
+    if 1 == sign:
+        decimal_number = -decimal_number
+    # Вычисление значения полинома
+    polynomial_value = trigonometric_series(coefs,decimal_number) % 1
+    
+    result = int((polynomial_value * 2) >= 1)  
+    return result
+    
         
 # Global Setting
 FUNCTOR =  (
@@ -486,24 +552,7 @@ def test3():
     seq = df['negative sign'].values.tolist()
     print(seq)
     
-                    
-def print_result():
-    global FUNCTOR 
-    FUNCTOR = (affine_transform, bentFunc64)
-    rel_bin_filename = get_file_path('original/bin_min_relative_change.npy')
-    seq = np.load(rel_bin_filename, allow_pickle=True).tolist()
-    q_values = (0, 0, 0, 0, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 0, 0, 1, 1, 1, 1, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
-    print('q_vlues=', len(q_values))
-    alpha = 0.8
-    train_seq, test_seq = split_data(seq, alpha)
-    m = 5
-    n = 6
-    error_train = approximation_error(train_seq,m,n,q_values)
-    print('error >>', error_train )
-    error_test = approximation_error(test_seq, m, n,q_values)
-    print('error >>', error_train, error_test )
-
-
+    
 def learn():
     global FUNCTOR, FUNC_NAME
     
@@ -538,7 +587,7 @@ def learn():
             'base': 0.5,
             'mod': 1,
             'rsize': 5,
-            'ind_size': 11,
+            'ind_size': 21,
             'pop_size': 300,  # Размер популяции
             'generations': generations,  # Кол.поколений
             'cx_prob': cx_prob,  # Вероятность скрещивания
@@ -561,15 +610,17 @@ def learn2():
     global FUNCTOR, FUNC_NAME
     
     # FUNCTOR = (float_transform, (bentFunc64,bentTrio13)) 
-    FUNCTOR = (float_identity_transform, (identity,identity)) 
-    FUNC_NAME ='float_' + FUNCTOR[1][0].__name__
+    #FUNCTOR = (float_identity_transform, (identity,identity)) 
+    FUNCTOR = (double_transform, (identity,identity)) 
+    FUNC_NAME ='float_double'
+    FHI  = (1 + math.sqrt(5)) / 2
 
     rel_bin_filename = get_file_path('original/bin_min_relative_change.npy')
     seq_original = np.load(rel_bin_filename, allow_pickle=True).tolist()
     #seq = seq_original[-1260:]
     seq  = seq_original
     epoch = 0
-
+    
     while epoch <10:
         generations = 20
         cx_prob = 0.5
@@ -585,7 +636,7 @@ def learn2():
             'base': 0.5,
             'mod': 1,
             'rsize': 1,
-            'ind_size': 11,
+            'ind_size': 14,
             'pop_size': 300,  # Размер популяции
             'generations': generations,  # Кол.поколений
             'cx_prob': cx_prob,  # Вероятность скрещивания
