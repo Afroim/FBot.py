@@ -473,11 +473,12 @@ def searchBinQuadraticForm(params):
         indpb=0.5)
     elif 2 == mate:
          toolbox.register("mate", tools.cxOnePoint)
-    # elif 4 == mate:
-    #     toolbox.register("mate", tools.cxPartialyMatched)
-    #toolbox.register("mutate", tools.mutUniformInt, low=0,up=mod - 1,indpb=BitProba)
+    elif 3 == mate:
+        toolbox.register("mate", tools.cxSimulatedBinaryBounded, eta=20, low=[-1]*5, up=[1]*5)
+        
+    
     if 0 == mutate: 
-        toolbox.register("mutate", tools.    mutPolynomialBounded, low=-1, up=1, eta=1,indpb=BitProba)
+        toolbox.register("mutate", tools.    mutPolynomialBounded, low=-1, up=1, eta=60,indpb=BitProba)
     elif 1 == mutate:
          toolbox.register("mutate", tools.mutGaussian , mu=0, sigma=1, indpb=BitProba)
 
@@ -677,8 +678,8 @@ def learn2():
     
     while epoch <10:
         generations = 20
-        cx_prob = 0.1
-        mut_prob = 0.9
+        cx_prob = 0.5
+        mut_prob = 0.5
         mate = 2
         selection = 1
         mutate = 0
