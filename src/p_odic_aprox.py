@@ -678,13 +678,13 @@ def learn2():
     
     while epoch <10:
         generations = 20
-        cx_prob = 0.5
-        mut_prob = 0.5
-        mate = 2
+        cx_prob = 0.1
+        mut_prob = 0.9
+        mate = 0
         selection = 1
         mutate = 0
         print(f'epoch --> {epoch}')
-        print(f'mate={mate}~({cx_prob},{mut_prob}), selection={selection}')
+        print(f'mate={mate}~({cx_prob},{mut_prob}),   mutate={mutate}, selection={selection}')
         
         params = {
             'sequence': seq,  # Бинарная послед.
@@ -692,14 +692,14 @@ def learn2():
             'base': 0.5,
             'mod': 1,
             'rsize': 1,
-            'ind_size': 5,
-            'pop_size': 500,  # Размер популяции
+            'ind_size': 10,
+            'pop_size': 100,  # Размер популяции
             'generations': generations,  # Кол.поколений
             'cx_prob': cx_prob,  # Вероятность скрещивания
             'mut_prob': mut_prob,  # Вероятность мутации
             'alpha': 0.8,  # Разбиение на выборки
-            'mu': 256,
-            'lambda': 128,
+            'mu': 64,
+            'lambda': 32,
             'algo': 2, # идекс алгоритма,
             'mate': mate, # индекс функции скрещиванияя
             'mutate':mutate,
