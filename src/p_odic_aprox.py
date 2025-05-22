@@ -233,6 +233,24 @@ def float_sign_transform(params, x, coefs ):
     base = params["base"]
     mod = params["mod"]
     func = params["func"]
+   
+    decimal_number = np.dot(x[::-1], base ** np.arange(len(x)))
+    
+    # Вычисление значения полинома
+    powers = np.arange(len(coefs))
+    polynomial_value = np.sum(np.array(coefs) * (decimal_number ** powers)) % mod
+    
+    by = decimal_to_binary(polynomial_value, rsize)
+
+    result = func[len(by)%2](by)
+    return result
+  
+  
+def float_sign_transform(params, x, coefs ):   
+    rsize  = params["rsize"]
+    base = params["base"]
+    mod = params["mod"]
+    func = params["func"]
     x1 = x[1:]
     sign = x[0]
     decimal_number = np.dot(x1[::-1], base ** np.arange(len(x1)))
