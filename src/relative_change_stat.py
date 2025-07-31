@@ -54,7 +54,7 @@ def bin_min_relative_change():
     print(avr_max, avr_min)
     
     bin_min_relative_change = [1 if item > avr_min else 0 for item in min_relative_change]
-    bin_filename = get_file_path('bin_min_relative_change.npy')
+    bin_filename = get_file_path('bin_min_relative_change.npy', ORIGINAL)
     np.save(bin_filename, bin_min_relative_change)
     print('Save bin_min_relative_change')
   
@@ -64,9 +64,12 @@ def relative_change():
     #sec = df['negative sign'].values.tolist()
 
     min_relative_change = []
+    close_relative_change = []
     max_relative_change = []
     for index, row in df.iterrows():
         sec = row['negative sign']
+        close_ = abs(row['Close'] - row['Open'])/row['Open']
+        close_relative_change.append(close_)
         if sec == 0:
             max_limit = (row['High'] - row['Open'])/row['Open']
             min_limit = (row['Open'] - row['Low'])/row['Open']
@@ -75,8 +78,16 @@ def relative_change():
             min_limit = (row['High'] - row['Open'])/row['Open']
         min_relative_change.append(min_limit)
         max_relative_change.append(max_limit)
+        
     	
-    return max_relative_change, min_relative_change
+    return (max_relative_change, 					
+    			min_relative_change, 
+    			close_relative_change)
+    			
+def trend():
+	df = getOriginalDF()
+	sec = df['negative sign'].values.tolist()
+	return sec
     
     
 

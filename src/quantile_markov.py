@@ -71,18 +71,18 @@ def extract_submatrix(matrix, top, left):
     return normalized
   
     
-def run_eq():
-    highes, lowes = rcs.relative_change()
-    matrix, intervals, means, stds = build_transition_matrix(lowes, 2)
-    
+def run_eq(index, stages, top, left):
+    values = rcs.relative_change()
+    matrix, intervals, means, stds = build_transition_matrix(values[index], stages)
+    sub_matrix = extract_submatrix(matrix,top,left)
     print("Матрица переходов:")
-    print(matrix)
+    print(sub_matrix)
     print("Границы интервалов:")
     print(intervals)
     print("Средние по интервалам:")
     print(means)
-    print("СКО по интервалам:")
-    print(stds)
+    #print("СКО по интервалам:")
+#    print(stds)
     
 
 def next_stage(matrix, quantile_edges,
@@ -103,18 +103,29 @@ def next_stage(matrix, quantile_edges,
     
     return next_index
 
-    #if threshold > quantile_edges[next_index + 1]:
-#        return 0
-#    else:
-#        return means[next_index]
-        
 
 def run_qunt():
+    quantiles= [0,0.25, 0.5, 0.75,1.0]
+    highes, lowes, closes = rcs.relative_change()
+    matrix, intervals, means, stds = quantile_trans_matrix(closes, quantiles)
+    
+    
+    print("Матрица переходов:")
+    print(matrix)
+    print("Границы интервалов:")
+    print(intervals)
+    print("Средние по интервалам:")
+    print(means)
+    print("СКО по интервалам:")
+    print(stds)
+        
+
+def run_qunt2(index,quantiles,top,left):
     #quantiles= [0, 0.5, 0.625, 0.75, 0.875,1.0]
-    quantiles= [0,0.5, 0.67, 0.835,1.0]
-    highes, lowes = rcs.relative_change()
-    matrix, intervals, means, stds = quantile_trans_matrix(lowes, quantiles)
-    sub_matrix = extract_submatrix(matrix,[0,1,2,3], [1,2,3])
+    #quantiles= [0,0.5, 0.67, 0.835,1.0]
+    values = rcs.relative_change()
+    matrix, intervals, means, stds = quantile_trans_matrix(values[index], quantiles)
+    sub_matrix = extract_submatrix(matrix,top,left)
     
     print("Матрица переходов:")
     print(matrix)
@@ -124,8 +135,8 @@ def run_qunt():
     print(intervals)
     print("Средние по интервалам:")
     print(means)
-    print("СКО по интервалам:")
-    print(stds)
+    #print("СКО по интервалам:")
+#    print(stds)
     
     
 def run_offset():
@@ -154,10 +165,14 @@ def run_offset():
     
     print("offset",offset, sep="=")
     
+
+
+    
     
 if __name__ == "__main__":    
-    run_eq()
-    run_qunt()
+    #run_eq(0,5,[0,1,2,3,4],[0,1,2 ,3])
+    run_eq(1,5,[0,1,2,3,4],[0,1,2,3,4])
+    #run_qunt2(0,[0.,0.33,0.44, 0.55, 0.66,1.0],[0,1,2,3,4],[1,2,3])
     #for _ in range(0,100):
 #        run_offset()
     

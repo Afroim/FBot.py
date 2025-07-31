@@ -8,6 +8,8 @@ import csv
 from tabulate import tabulate
 import pandas as pd
 
+import relative_change_stat as rcs
+
 def get_file_path_old(fileName):
     file_name = fileName
     base_path_win = "C:\\Users\\Alik\\Documents\\Project\\FBOT\\PY\\FBot.py\\data\\XAUUSD\\D1\\"
@@ -345,18 +347,16 @@ def searchBinQuadraticForm(params):
     return best_individual
 
 def test1():
-    filename = get_file_path('XAUUSD-D1-DIFF.csv')
-    df = pd.read_csv(filename)
-    seq = df['negative sign'].values.tolist()
+    sec = rcs.trend()
 
-    generations = 100
+    generations = 10
 # Пример вызова функции
     params = {
-        'sequence': seq ,  # Бинарная послед.
-        'm': 6,  # Размер окна
-        'pop_size': 200,  # Размер популяции
+        'sequence': sec ,  # Бинарная послед.
+        'm': 8,  # Размер окна
+        'pop_size': 20,  # Размер популяции
         'generations': generations,  # Кол. поколений
-        'cx_prob': 0.3,  # Вероятность скрещивания
+        'cx_prob': 0.5,  # Вероятность скрещивания
         'mut_prob': 0.5,  # Вероятность мутации
         'alpha': 0.8,  # Разбиение на обучающую и тестовую выборку
        'mu': 100,
@@ -396,4 +396,4 @@ def test3():
     
     
 if __name__ == "__main__":
-    test2()
+    test1()
